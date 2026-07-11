@@ -1,0 +1,383 @@
+{{> header}}
+
+<div class="container py-3 py-md-5">
+    <div class="p-3 p-sm-4 p-md-5 rounded-4 rounded-md-5 shadow-sm border border-secondary-subtle bg-white">
+
+        <div class="d-flex justify-content-between align-items-center mb-4 gap-3">
+            <h2 class="h3 mb-0">Editar Usuario:</h2>
+            <a class="btn btn-outline-danger d-flex align-items-center justify-content-center shadow-sm" href="/usuario">
+                <span class="d-none d-sm-inline-block">Regresar &nbsp;</span>
+                <i class="fas fa-undo"></i>
+            </a>
+        </div>
+
+        <div class="border border-1 rounded-4 p-3 p-md-4 mb-4 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-4 gap-3">
+                <h3 class="h5 mb-0 text-success fw-bold">Información Personal</h3>
+                <div class="d-flex gap-2">
+                    <button type="button" id="editarInfoBtn" onclick="editarInfo()" class="btn btn-outline-primary d-flex align-items-center justify-content-center shadow-sm">
+                        <span class="d-none d-sm-inline-block">Editar &nbsp;</span><i class="fas fa-edit"></i>
+                    </button>
+                    <a id="guardarInfoBtn" class="btn btn-outline-primary d-flex align-items-center justify-content-center shadow-sm d-none" onclick="guardarInfo()">
+                        <span class="d-none d-sm-inline-block">Guardar &nbsp;</span><i class="fas fa-save"></i>
+                    </a>
+                    <a id="cancelarInfoBtn" class="btn btn-outline-danger d-flex align-items-center justify-content-center shadow-sm d-none" onclick="cancelarInfo()">
+                        <span class="d-none d-sm-inline-block">Cancelar &nbsp;</span><i class="fas fa-ban"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div id="infoAlert">
+                <div class="alert alert-dismissible fade show mb-3 rounded" style="display: none;" role="alert">
+                    <span id="infoText"></span>
+                    <button type="button" class="btn-close" onclick="closeAlert(infoAlert)"></button>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre<span class="text-danger"> *</span></label>
+                        <input type="text" id="nombre" class="form-control border shadow-sm rounded-3" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Apellido<span class="text-danger"> *</span></label>
+                        <input type="text" id="apellido" class="form-control border shadow-sm rounded-3" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email<span class="text-danger"> *</span></label>
+                        <input type="text" id="correo" class="form-control border shadow-sm rounded-3" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Contraseña (dejar vacío para no cambiar)</label>
+                        <input type="text" id="password" class="form-control border shadow-sm rounded-3" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Celular</label>
+                        <input type="text" id="celular" class="form-control border shadow-sm rounded-3" readonly>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Rol<span class="text-danger"> *</span></label>
+                        <select id="rol" class="form-select border shadow-sm rounded-3" disabled>
+                            <option value="USER">USER</option>
+                            <option value="ADMIN">ADMIN</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Estatus</label>
+                        <select id="estatus" class="form-select border shadow-sm rounded-3" disabled>
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Fecha de Nacimiento</label>
+                        <input type="date" id="fecha_nacimiento" class="form-control border shadow-sm rounded-3" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Sueldo<span class="text-danger"> *</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 rounded-start-3">S/</span>
+                            <input type="number" step="0.01" id="sueldo" class="form-control border shadow-sm rounded-end-3 border-start-0" readonly>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Fecha de Ingreso</label>
+                        <input type="date" id="fecha_ingreso" class="form-control border shadow-sm rounded-3" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="border border-1 rounded-4 p-3 p-md-4 mb-4 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-4 gap-3">
+                <h3 class="h5 mb-0 text-success fw-bold">Calendario</h3>
+                <div class="d-flex gap-2">
+                    <button type="button" id="editarCalBtn" onclick="editarCal()" class="btn btn-outline-primary d-flex align-items-center justify-content-center shadow-sm">
+                        <span class="d-none d-sm-inline-block">Editar &nbsp;</span><i class="fas fa-edit"></i>
+                    </button>
+                    <a id="guardarCalBtn" class="btn btn-outline-primary d-flex align-items-center justify-content-center shadow-sm d-none" onclick="guardarCal()">
+                        <span class="d-none d-sm-inline-block">Guardar &nbsp;</span><i class="fas fa-save"></i>
+                    </a>
+                    <a id="cancelarCalBtn" class="btn btn-outline-danger d-flex align-items-center justify-content-center shadow-sm d-none" onclick="cancelarCal()">
+                        <span class="d-none d-sm-inline-block">Cancelar &nbsp;</span><i class="fas fa-ban"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div id="calAlert">
+                <div class="alert alert-dismissible fade show mb-3 rounded" style="display: none;" role="alert">
+                    <span id="calText"></span>
+                    <button type="button" class="btn-close" onclick="closeAlert(calAlert)"></button>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-bold">ID de calendario (Google)<span class="text-danger"> *</span></label>
+                    <input type="text" id="id_calendario" class="form-control border shadow-sm rounded-3" readonly>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-bold">Hora de ingreso<span class="text-danger"> *</span></label>
+                    <input type="time" id="ingreso" class="form-control border shadow-sm rounded-3" readonly>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-bold">Hora de salida<span class="text-danger"> *</span></label>
+                    <input type="time" id="salida" class="form-control border shadow-sm rounded-3" readonly>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{{> footer}}
+
+<script>
+    let usuarioId = "{{usuario_id}}";
+    let usuario_data = null;
+
+    function getUsuario() {
+        return fetch(`/usuario/editar/${usuarioId}/datos`)
+            .then(res => res.json())
+            .then(dataResponse => dataResponse.usuario);
+    }
+
+    function pintarInfo(usuario) {
+        $('#nombre').val(usuario.nombre);
+        $('#apellido').val(usuario.apellido);
+        $('#correo').val(usuario.correo);
+        $('#password').val('');
+        $('#rol').val(usuario.rol);
+        $('#estatus').val(usuario.estatus == 1 ? "Activo" : "Inactivo");
+        $('#sueldo').val(usuario.sueldo);
+        $('#celular').val(usuario.celular);
+        $('#fecha_nacimiento').val(usuario.fecha_nacimiento ? luxon.DateTime.fromMillis(usuario.fecha_nacimiento).toFormat('yyyy-MM-dd') : '');
+        $('#fecha_ingreso').val(usuario.fecha_ingreso ? luxon.DateTime.fromMillis(usuario.fecha_ingreso).toFormat('yyyy-MM-dd') : '');
+    }
+
+    function pintarCal(usuario) {
+        console.log('usuario', usuario)
+        $('#id_calendario').val(usuario.id_calendario);
+        $('#ingreso').val(msToTime(usuario.ingreso));
+        $('#salida').val(msToTime(usuario.salida));
+    }
+
+    getUsuario().then(usuario => {
+        usuario_data = usuario;
+        pintarInfo(usuario);
+        pintarCal(usuario);
+    });
+
+    function editarInfo() {
+        $('#editarInfoBtn').addClass('d-none');
+        $('#guardarInfoBtn, #cancelarInfoBtn').removeClass('d-none').addClass('d-flex');
+        $('#nombre, #apellido, #correo, #password, #celular, #fecha_nacimiento, #sueldo, #fecha_ingreso').removeAttr('readonly');
+        $('#rol, #estatus').removeAttr('disabled');
+    }
+
+    function cancelarInfo() {
+        getUsuario().then(usuario => {
+            usuario_data = usuario;
+            pintarInfo(usuario);
+        });
+        $('#nombre, #apellido, #correo, #password, #celular, #fecha_nacimiento, #sueldo, #fecha_ingreso').attr('readonly', true);
+        $('#rol, #estatus').attr('disabled', true);
+        $('#editarInfoBtn').removeClass('d-none').addClass('d-flex');
+        $('#guardarInfoBtn, #cancelarInfoBtn').removeClass('d-flex').addClass('d-none');
+    }
+
+    function guardarInfo() {
+        const nombre = $('#nombre').val();
+        const apellido = $('#apellido').val();
+        const correo = $('#correo').val();
+        const password = $('#password').val();
+        const rol = $('#rol').val();
+        const estatus = $('#estatus').val();
+        const sueldo = $('#sueldo').val();
+        const celular = $('#celular').val();
+        const fecha_nacimiento = $('#fecha_nacimiento').val();
+        const fecha_ingreso = $('#fecha_ingreso').val();
+
+        $('#infoAlert > .alert').addClass('alert-danger').removeClass('alert-primary');
+        $('#guardarInfoBtn').prop('disabled', true).addClass('disabled');
+
+        if (nombre.length < 3 || nombre.length > 25) {
+            $('#nombre').focus();
+            showAlerts(infoAlert, infoText, "El nombre debe tener al menos 3 caracteres máximo 25.");
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+        if (apellido.length < 2 || apellido.length > 25) {
+            $('#apellido').focus();
+            showAlerts(infoAlert, infoText, "Apellido requerido, mínimo 2 caracteres máximo 25.");
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+        let correoPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!correoPattern.test(correo)) {
+            $('#correo').focus();
+            showAlerts(infoAlert, infoText, "Ingresa un correo válido.");
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+        let passPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[^\s]+$/;
+        if (password !== "" && !passPattern.test(password)) {
+            $('#password').focus();
+            showAlerts(infoAlert, infoText, "Ingresa una contraseña válida (mayúscula, minúscula, número y símbolo).");
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+        if (sueldo == "") {
+            $('#sueldo').focus();
+            showAlerts(infoAlert, infoText, "Ingrese su sueldo");
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+        let phonePattern = /^[0-9]{9}$/;
+        if (celular !== "" && !phonePattern.test(celular)) {
+            $('#celular').focus();
+            showAlerts(infoAlert, infoText, "El número de celular debe tener 9 dígitos");
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+
+        const fecha_nacimiento_ms = fecha_nacimiento ? luxon.DateTime.fromISO(fecha_nacimiento).toUTC().ts : 0;
+        const fecha_ingreso_ms = fecha_ingreso ? luxon.DateTime.fromISO(fecha_ingreso).toUTC().ts : 0;
+
+        const cambios = {};
+        if (nombre != usuario_data.nombre) cambios.nombre = nombre;
+        if (apellido != usuario_data.apellido) cambios.apellido = apellido;
+        if (correo != usuario_data.correo) cambios.correo = correo;
+        if (password) cambios.password = password;
+        if (rol != usuario_data.rol) cambios.rol = rol;
+        if (estatus != (usuario_data.estatus == 1 ? "Activo" : "Inactivo")) cambios.estatus = estatus;
+        if (String(sueldo) != String(usuario_data.sueldo)) cambios.sueldo = sueldo;
+        if (celular != usuario_data.celular) cambios.celular = celular;
+        if (fecha_nacimiento_ms != (usuario_data.fecha_nacimiento || 0)) cambios.fecha_nacimiento = fecha_nacimiento_ms;
+        if (fecha_ingreso_ms != (usuario_data.fecha_ingreso || 0)) cambios.fecha_ingreso = fecha_ingreso_ms;
+
+        if (Object.keys(cambios).length == 0) {
+            showAlerts(infoAlert, infoText, "Sin cambios.");
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+
+        sendFormInfo(cambios);
+    }
+
+    function sendFormInfo(cambios) {
+        fetch("{{{action_info}}}", {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: cambios })
+        })
+        .then(response => response.json())
+        .then(dataResponse => {
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            if(dataResponse.redirect) {
+                location.href = dataResponse.redirect;
+                return;
+            }
+            showAlerts(infoAlert, infoText, dataResponse.msg);
+            if (dataResponse.flash == "success") {
+                $('#infoAlert > .alert').addClass('alert-primary').removeClass('alert-danger');
+                cancelarInfo();
+            } else {
+                $('#infoAlert > .alert').addClass('alert-danger').removeClass('alert-primary');
+            }
+        })
+        .catch(error => {
+            $('#infoAlert > .alert').addClass('alert-danger').removeClass('alert-primary');
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            console.error('Error:', error);
+            showAlerts(infoAlert, infoText, "Ocurrió un error al procesar la solicitud");
+        });
+    }
+
+    function editarCal() {
+        $('#editarCalBtn').addClass('d-none');
+        $('#guardarCalBtn, #cancelarCalBtn').removeClass('d-none').addClass('d-flex');
+        $('#id_calendario, #ingreso, #salida').removeAttr('readonly');
+    }
+
+    function cancelarCal() {
+        getUsuario().then(usuario => {
+            usuario_data = usuario;
+            pintarCal(usuario);
+        });
+        $('#id_calendario, #ingreso, #salida').attr('readonly', true);
+        $('#editarCalBtn').removeClass('d-none').addClass('d-flex');
+        $('#guardarCalBtn, #cancelarCalBtn').removeClass('d-flex').addClass('d-none');
+    }
+
+    function guardarCal() {
+        const id_calendario = $('#id_calendario').val();
+        const ingresoVal = $('#ingreso').val();
+        const salidaVal = $('#salida').val();
+        const ingresoMs = timeToMs(ingresoVal);
+        const salidaMs = timeToMs(salidaVal);
+
+        $('#calAlert > .alert').addClass('alert-danger').removeClass('alert-primary');
+        $('#guardarCalBtn').prop('disabled', true).addClass('disabled');
+
+        if (id_calendario.trim() === "") {
+            $('#id_calendario').focus();
+            showAlerts(calAlert, calText, "El ID de calendario es requerido.");
+            $('#guardarCalBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+        if (ingresoVal === "") {
+            $('#ingreso').focus();
+            showAlerts(calAlert, calText, "La hora de ingreso es requerida.");
+            $('#guardarCalBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+        if (salidaVal === "") {
+            $('#salida').focus();
+            showAlerts(calAlert, calText, "La hora de salida es requerida.");
+            $('#guardarCalBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+
+        const cambios = {};
+        if (id_calendario != (usuario_data.id_calendario || '')) cambios.id_calendario = id_calendario;
+        if (Number(ingresoMs || 0) != Number(usuario_data.ingreso || 0)) cambios.ingreso = ingresoMs;
+        if (Number(salidaMs || 0) != Number(usuario_data.salida || 0)) cambios.salida = salidaMs;
+
+        if (Object.keys(cambios).length == 0) {
+            showAlerts(calAlert, calText, "Sin cambios.");
+            $('#guardarCalBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+
+        fetch("{{{action_calendario}}}", {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: cambios })
+        })
+        .then(response => response.json())
+        .then(dataResponse => {
+            $('#guardarCalBtn').prop('disabled', false).removeClass('disabled');
+            if(dataResponse.redirect) {
+                location.href = dataResponse.redirect;
+                return;
+            }
+            showAlerts(calAlert, calText, dataResponse.msg);
+            if (dataResponse.flash == "success") {
+                $('#calAlert > .alert').addClass('alert-primary').removeClass('alert-danger');
+                cancelarCal();
+            } else {
+                $('#calAlert > .alert').addClass('alert-danger').removeClass('alert-primary');
+            }
+        })
+        .catch(error => {
+            $('#calAlert > .alert').addClass('alert-danger').removeClass('alert-primary');
+            $('#guardarCalBtn').prop('disabled', false).removeClass('disabled');
+            console.error('Error:', error);
+            showAlerts(calAlert, calText, "Ocurrió un error al procesar la solicitud");
+        });
+    }
+</script>

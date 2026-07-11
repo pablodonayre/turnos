@@ -1,0 +1,77 @@
+{{#if use_spaces }}
+<script src="https://mastercoders-minimarket.nyc3.cdn.digitaloceanspaces.com/Libraries/third_party/jquery-3.7.0/jquery-3.7.0.min.js"></script>
+<script src="https://mastercoders-minimarket.nyc3.cdn.digitaloceanspaces.com/Libraries/third_party/bootstrap-5.0.2-dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://mastercoders-minimarket.nyc3.cdn.digitaloceanspaces.com/Libraries/third_party/bootstrap-table-1.18.3/dist/bootstrap-table.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@2.0.2/build/global/luxon.min.js"></script>
+<script src="https://mastercoders-minimarket.nyc3.cdn.digitaloceanspaces.com/Libraries/js/alerts.js"></script>
+{{else}}
+<script src="/Libraries/jquery-3.7.0/js/jquery-3.7.0.min.js"></script>
+<script src="/Libraries/bootstrap-5.0.2-dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@2.0.2/build/global/luxon.min.js"></script>
+<script src="/Libraries/master_coders/js/alerts.js"></script>
+{{/if}}
+
+<script>
+    /*
+        Para darle formato a los turnos
+    */
+    function msToTime(ms) {
+        if (!ms) return '';
+        //const totalMin = Math.floor(ms / 60000);
+        //const h = String(Math.floor(totalMin / 60)).padStart(2, '0');
+        //const m = String(totalMin % 60).padStart(2, '0');
+        const luxon_time = luxon.DateTime.fromMillis(ms, { zone: "America/Lima"});
+        const h = luxon_time.hour;
+        const m = luxon_time.minute;
+        // return `${h}:${m}`;
+        return luxon_time.toFormat('HH:mm');
+    }
+    function timeToMs(timeStr) {
+        if (!timeStr) return '';
+        const [h, m] = timeStr.split(':');
+        //return (parseInt(h) * 3600 + parseInt(m) * 60) * 1000;
+        const now = luxon.DateTime.now();//.setZone("America/Lima");
+        const luxon_time = now.set({ hour: h, minute: m, second: 0, millisecond: 0})
+        return luxon_time.toUTC().ts;
+    }
+
+    /*
+        Funciones del plugin bootstrap-table para la respuesta
+    */
+    function queryParams(params){
+        var options = $('#table').bootstrapTable('getOptions');
+        if (!options.pagination) params.limit = options.totalRows;
+        return params;
+    }
+
+    function responseHandler(res){
+        if (res.flash && res.flash == 'danger') {
+            if (res.redirect) {
+                location.href = '/auth';
+            } else {
+                showAlerts(dangerAlert, dangerMessage, res.msg);
+            }
+        }
+
+        console.log('res', res)
+
+        return res;
+    }
+
+    /*
+        Para los inputs search y botones de limpiar
+    */
+    function buscar(input, btn, tabla) {
+        btn.classList.toggle('d-none', input.value.length === 0);
+        tabla.bootstrapTable('refresh', { silent: true });
+    }
+
+    function limpiar(input, btn, tabla) {
+        input.value = '';
+        btn.classList.add('d-none');
+        tabla.bootstrapTable('resetSearch', '');
+    }
+</script>
+</body>
+</html>

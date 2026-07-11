@@ -1,0 +1,137 @@
+{{> header }}
+
+<div class="container-fluid py-2 py-md-5 px-3 px-md-4">
+    <div class="p-3 p-md-5 rounded-4 shadow-sm border bg-white">
+        <h2 class="display-6 fw-normal mb-4">Usuarios registrados:</h2>
+
+        <div class="d-flex justify-content-between align-items-center mb-4 gap-3">
+            <div class="position-relative" style="max-width: 300px; width: 100%;">
+                <input type="text" id="inputBuscar" class="form-control" placeholder="Buscar usuario" oninput="buscar(this, document.getElementById('btnLimpiar'), $('#table'))">
+                <button id="btnLimpiar"
+                        class="btn position-absolute top-50 end-0 translate-middle-y border-0 text-muted d-none"
+                        type="button" style="margin-right: 10px;"
+                        onclick="limpiar(document.getElementById('inputBuscar'), this, $('#table'))">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            {{#if is_admin}}
+            <a class="btn btn-outline-primary shadow-sm" href="/usuario/nuevo">
+                <span class="d-none d-sm-inline-block">Añadir usuario &nbsp;</span>
+                <i class="fas fa-plus"></i>
+            </a>
+            {{/if}}
+        </div>
+
+        <div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <form id="modalForm" class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar Acción</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="modalMessage"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="modal">
+                            Cancelar &nbsp;<i class="fas fa-undo"></i>
+                        </button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            Desactivar &nbsp;<i class="fas fa-power-off"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table id="table" class="table"></table>
+        </div>
+    </div>
+</div>
+
+{{> footer}}
+
+<script>
+    let idUsuarioSeleccionado = '';
+    const myModal = new bootstrap.Modal(document.getElementById('modalEliminar'));
+
+
+    $(document).ready(function () {
+        $('#table').bootstrapTable({
+            url: "{{{ url_data }}}",
+            exportDataType: 'all',
+            exportTypes: ['xlsx'],
+            showExport: "true",
+            exportOptions: {
+                fileName: 'Lista de Usuarios'
+            },
+            search: true,
+            pagination: true,
+            serverSort: true,
+            sidePagination: "server",
+            searchHighlight: true,
+            showSearchClearButton: true,
+            showExtendedPagination: true,
+            pageSize: 50,
+            queryParams: queryParams,
+            searchSelector: "#inputBuscar",
+            responseHandler: responseHandler,
+            columns: [
+                { field: 'nombre', title: 'Nombre', sortable: true },
+                { field: 'apellido', title: 'Apellido', sortable: true },
+                { field: 'correo', title: 'Correo', sortable: true },
+                { field: 'rol', title: 'Rol', sortable: true },
+                {
+                    field: 'estatus', title: 'Estado', sortable: true,
+                    formatter: function (value, row) {
+                        return row.estatus == 1 ? 'Activo' : 'Inactivo';
+                    }
+                },
+                {
+                    field: 'acciones', title: 'Acciones', align: 'center',
+                    formatter: function (value, row) {
+                        const botonEstatus = row.estatus == 1
+                            ? `<button class="btn btn-sm btn-outline-danger btnDelete"
+                                    data-id="${row.id}" data-nombre="${row.nombre} ${row.apellido}" title="Desactivar">
+                                    <i class="fas fa-power-off"></i>
+                                </button>`
+                            : '';
+
+                        return `
+                            <div class="btn-group" role="group">
+                                <a class="btn btn-sm btn-outline-primary" href="/usuario/editar/${row.id}" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                ${botonEstatus}
+                            </div>
+                        `;
+                    }
+                },
+            ],
+            formatNoMatches: function () { return 'No se encontraron usuarios'; },
+            formatLoadingMessage: function () { return 'Cargando, espere por favor'; }
+        });
+
+        if ("{{{ is_admin }}}" == "false") {
+            $('#table').bootstrapTable('hideColumn', 'acciones');
+        }
+
+        $(document).on('click', '.btnDelete', function () {
+            idUsuarioSeleccionado = $(this).data('id');
+            document.getElementById('modalMessage').innerHTML =
+                `¿Está seguro que desea desactivar a <strong>${$(this).data('nombre')}</strong>?`;
+            myModal.show();
+        });
+
+        document.getElementById('modalForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            fetch(`{{{url_deactivate}}}/${idUsuarioSeleccionado}`, { method: 'PUT' })
+                .then(res => res.json())
+                .then(() => {
+                    myModal.hide();
+                    $('#table').bootstrapTable('refresh');
+                });
+        });
+    });
+</script>

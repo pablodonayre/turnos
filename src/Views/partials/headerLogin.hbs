@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    {{!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> --}}
+    <meta name="viewport" content="width=device-width, initial-scale = 0.86, maximum-scale=3.0, minimum-scale=0.86">
+    <title>{{ title }}</title>
+    
+    {{#if use_spaces }}
+    <link href="https://mastercoders-minimarket.nyc3.cdn.digitaloceanspaces.com/Libraries/third_party/bootstrap-5.0.2-dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://mastercoders-minimarket.nyc3.cdn.digitaloceanspaces.com/Libraries/third_party/fontawesome-5.6.3-web/css/all.css">
+
+    <link rel="stylesheet" href="https://mastercoders-minimarket.nyc3.cdn.digitaloceanspaces.com/Libraries/css/alerts.css">
+    <link rel="stylesheet" href="https://mastercoders-minimarket.nyc3.cdn.digitaloceanspaces.com/Libraries/css/login.css">
+    {{!-- <link rel="icon" href="https://mastercoders-minimarket.nyc3.cdn.digitaloceanspaces.com/Data/favicon.ico" type="image/x-icon"> --}}
+    
+    {{else}}
+    
+    <link href="/Libraries/bootstrap-5.0.2-dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/Libraries/fontawesome-5.6.3-web/css/all.css">
+
+    <link rel="stylesheet" href="/Libraries/master_coders/css/alerts.css">
+    <link rel="stylesheet" href="/Libraries/master_coders/css/login.css">
+    {{!-- <link rel="icon" href="/Libraries/master_coders/img/favicon.ico" type="image/x-icon"> --}}
+    {{/if}}
+
+    <link rel="icon" href="/img/background/logo.ico" type="image/x-icon">
+
+</head>

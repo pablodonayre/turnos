@@ -1,0 +1,470 @@
+{{> header }}
+
+<div class="modal fade" id="modalPreview" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lightboxTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="imageContainer">
+                    <img id="previewImage" src="" alt="">
+                </div>
+                <div id="lightboxIframeWrapper" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid py-2 py-md-5 px-3 px-md-4">
+    <div class="p-3 p-md-5 rounded-4 shadow-sm border bg-white">
+        {{> alerts}}
+
+        <h2 class="display-6 fw-normal mb-4">Logs de asistencia:</h2>
+
+        <div class="d-flex justify-content-between align-items-center mb-4 gap-3 flex-wrap">
+            <div class="position-relative" style="max-width: 300px; width: 100%;">
+                <input type="text" id="inputBuscar" class="form-control" placeholder="Buscar en logs">
+                <button id="btnLimpiar" class="btn position-absolute top-50 end-0 translate-middle-y border-0 text-muted d-none" type="button" style="margin-right: 10px;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            {{#if is_admin}}
+            <div style="max-width: 300px; width: 100%;">
+                <select id="selectorUsuario" class="form-select">
+                    <option value="">Cargando usuarios...</option>
+                </select>
+            </div>
+            {{/if}}
+        </div>
+
+        <div class="table-responsive">
+            <table id="table" class="table"></table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalRevisarLog" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalRevisarLogTitulo">Revisar Log</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="logId">
+                <div id="modalLogError" class="alert alert-danger d-none" role="alert"></div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Estado</label>
+                    <select id="logEstatus" class="form-select border shadow-sm rounded-3">
+                        <option value="1">Pendiente</option>
+                        <option value="2">Aprobado</option>
+                        <option value="3">Desaprobado</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Comentario</label>
+                    <textarea id="logComentario" class="form-control border shadow-sm rounded-3" rows="4" maxlength="500" placeholder="Escriba un comentario..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Adjunto</label>
+                    <div class="drop-zone" id="drop-file-log">
+                        <input type="file" id="file-log">
+                        <div class="drop-zone-label">
+                            <i class="fas fa-cloud-upload-alt me-1"></i>
+                            Arrastra aquí o <u>haz clic</u>
+                        </div>
+                    </div>
+                    <div id="status-file-log" class="status-wrapper mt-1"></div>
+                    <div id="adjunto-actual" class="small text-muted mt-1"></div>
+                    <input id="logArchivoServer" hidden>
+                    <input id="logArchivoUsuario" hidden>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="modal">
+                    Cancelar &nbsp;<i class="fas fa-undo"></i>
+                </button>
+                <button type="button" id="btnGuardarLog" onclick="guardarRevisionLog()" class="btn btn-sm btn-outline-primary">
+                    Guardar &nbsp;<i class="fas fa-save"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{> footer}}
+
+<script src="https://cdn.jsdelivr.net/npm/luxon@2.0.2/build/global/luxon.min.js"></script>
+<script>
+    let usuariosCargados = false;
+    const modalPreview = new bootstrap.Modal(document.getElementById('modalPreview'));
+
+    
+    $(document).on('click', '.preview_file', function (e) {
+        e.preventDefault();
+        const url = $(this).attr('href');
+        const titulo = $(this).data('title') || url.split('/').pop();
+        abrirLightbox(url, titulo);
+    });
+
+    let zoomScale = 1;
+    let panX = 0;
+    let panY = 0;
+    let arrastrando = false;
+    let inicioX = 0;
+    let inicioY = 0;
+
+    function abrirLightbox(url, titulo) {
+        const esImagen = /\.(jpe?g|png|gif|webp|bmp)$/i.test(url);
+        $('#lightboxTitle').text(titulo);
+
+        zoomScale = 1;
+        panX = 0;
+        panY = 0;
+
+        if (esImagen) {
+            $('#imageContainer').show();
+            $('#lightboxIframeWrapper').hide().html('');
+            $('#previewImage').attr('src', url).attr('alt', titulo);
+            aplicarTransform();
+        } else {
+            $('#imageContainer').hide();
+            $('#lightboxIframeWrapper').show().html(`<iframe src="${url}"></iframe>`);
+        }
+
+        modalPreview.show();
+    }
+
+    document.getElementById('modalPreview').addEventListener('hidden.bs.modal', function () {
+        $('#previewImage').attr('src', '');
+        $('#lightboxIframeWrapper').html('');
+    });
+
+    function aplicarTransform() {
+        $('#previewImage').css('transform', `translate(${panX}px, ${panY}px) scale(${zoomScale})`);
+    }
+
+    document.getElementById('imageContainer').addEventListener('wheel', function (e) {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.1 : -0.1;
+        zoomScale = Math.min(Math.max(zoomScale + delta, 0.5), 5);
+        aplicarTransform();
+    });
+
+    const imageContainerEl = document.getElementById('imageContainer');
+    imageContainerEl.addEventListener('mousedown', function (e) {
+        arrastrando = true;
+        imageContainerEl.classList.add('dragging');
+        inicioX = e.clientX - panX;
+        inicioY = e.clientY - panY;
+    });
+    window.addEventListener('mousemove', function (e) {
+        if (!arrastrando) return;
+        panX = e.clientX - inicioX;
+        panY = e.clientY - inicioY;
+        aplicarTransform();
+    });
+    window.addEventListener('mouseup', function () {
+        arrastrando = false;
+        imageContainerEl.classList.remove('dragging');
+    });
+
+    const esAdmin = {{#if is_admin}}true{{else}}false{{/if}};
+    const modalRevisarLog = new bootstrap.Modal(document.getElementById('modalRevisarLog'));
+
+    function responseHandler(res) {
+        if (esAdmin && !usuariosCargados && Array.isArray(res.usuarios)) {
+            const $selector = $('#selectorUsuario');
+            $selector.empty();
+            res.usuarios.forEach(u => {
+                const seleccionado = Number(u.id) === Number(res.filtroUsuarioId) ? 'selected' : '';
+                $selector.append(`<option value="${u.id}" ${seleccionado}>${u.nombre} ${u.apellido}</option>`);
+            });
+            usuariosCargados = true;
+        }
+        return res.logs || [];
+    }
+
+    function queryParams(params) {
+        const usuarioId = $('#selectorUsuario').val();
+        return {
+            ...params,
+            usuario_id: usuarioId || undefined
+        };
+    }
+
+    function estatusFormatter(value) {
+        const map = {
+            1: 'Pendiente',
+            2: 'Aprobado',
+            3: 'Desaprobado'
+        };
+        return map[value] || map[1];
+    }
+
+    function verAdjuntoFormatter(value, row) {
+        if (!row.archivo_server) return 'No definido';
+        return `<a target="_blank" href="/img/perm/${row.archivo_server}"><i class="fas fa-external-link-alt"></i></a> &nbsp; <a class="preview_file" href="/img/perm/${row.archivo_server}" data-title="${row.archivo_usuario}">${row.archivo_usuario}</a>`;
+    }
+
+    function accionesFormatter(value, row) {
+        const yaCargado = !!(row.comentario && row.archivo_server);
+        const bloqueadoParaUsuario = !esAdmin && yaCargado;
+        const icono = bloqueadoParaUsuario ? 'fa-eye' : 'fa-clipboard-check';
+        const titulo = bloqueadoParaUsuario ? 'Ver' : 'Revisar';
+
+        return `
+            <button class="btn btn-sm btn-outline-primary btn-revisar-log"
+                data-id="${row.id}"
+                data-comentario="${row.comentario || ''}"
+                data-archivo-server="${row.archivo_server || ''}"
+                data-archivo-usuario="${row.archivo_usuario || ''}"
+                data-estatus="${row.estatus || 1}"
+                title="${titulo}">
+                <i class="fas ${icono}"></i>
+            </button>
+        `;
+    }
+
+    $(document).ready(function () {
+        $('#table').bootstrapTable({
+            url: "{{{ url_data }}}",
+            sidePagination: 'client',
+            pagination: true,
+            search: true,
+            searchHighlight: true,
+            showSearchClearButton: true,
+            pageSize: 50,
+            queryParams: queryParams,
+            searchSelector: '#inputBuscar',
+            responseHandler: responseHandler,
+            columns: [
+                {
+                    field: 'tipo', title: 'Tipo', sortable: true,
+                    formatter: function (value) {
+                        return value === 1 ? 'Entrada' : 'Salida';
+                    }
+                },
+                {
+                    field: 'fecha_hora', title: 'Fecha y hora', sortable: true,
+                    formatter: function (value) {
+                        if (!value) return '-';
+                        return luxon.DateTime.fromMillis(Number(value)).toFormat('dd-MMM-yyyy, HH:mm:ss');
+                    }
+                },
+                {
+                    field: 'estatus', title: 'Estado', sortable: true,
+                    formatter: estatusFormatter
+                },
+                {
+                    field: 'archivo_usuario', title: 'Adjunto', align: 'center',
+                    formatter: verAdjuntoFormatter
+                },
+                {
+                    field: 'acciones', title: 'Acciones', align: 'center',
+                    formatter: accionesFormatter
+                }
+            ],
+            formatNoMatches: function () { return 'No se encontraron logs'; },
+            formatLoadingMessage: function () { return 'Cargando, espere por favor'; }
+        });
+
+        $(document).on('change', '#selectorUsuario', function () {
+            $('#table').bootstrapTable('refresh');
+        });
+
+        $(document).on('click', '.btn-revisar-log', function () {
+            const id = $(this).data('id');
+            const comentario = $(this).data('comentario');
+            const archivoServer = $(this).data('archivo-server');
+            const archivoUsuario = $(this).data('archivo-usuario');
+            const estatus = $(this).data('estatus');
+
+            const yaCargado = !!(comentario && archivoServer);
+            const soloLectura = !esAdmin && yaCargado;
+
+            $('#logId').val(id);
+            $('#logComentario').val(comentario);
+            $('#logEstatus').val(estatus);
+            $('#logArchivoServer').val('');
+            $('#logArchivoUsuario').val('');
+            $('#status-file-log').html('');
+            $('#modalLogError').addClass('d-none').text('');
+
+            // estado solo el admin puede editar
+            $('#logEstatus').prop('disabled', !esAdmin);
+
+            // comentario bloqueado para el usuario
+            $('#logComentario').prop('disabled', soloLectura);
+
+            renderAdjuntoActual(archivoServer, archivoUsuario, !soloLectura);
+
+            $('#btnGuardarLog').toggleClass('d-none', soloLectura).prop('disabled', false);
+            $('#modalRevisarLogTitulo').text(soloLectura ? 'Ver Log' : 'Revisar Log');
+
+            modalRevisarLog.show();
+        });
+
+        function renderAdjuntoActual(archivoServer, archivoUsuario, permitirCambiar) {
+            if (archivoServer) {
+                $('#drop-file-log').hide();
+                $('#adjunto-actual').html(`
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <a href="/img/perm/${archivoServer}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                        <a href="/img/perm/${archivoServer}" class="preview_file btn btn-sm btn-outline-secondary" data-title="${archivoUsuario || archivoServer}">
+                            <i class="fas fa-file"></i> ${archivoUsuario || archivoServer}
+                        </a>
+                        ${permitirCambiar ? `
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="cambiarAdjuntoLog()">
+                            <i class="fas fa-exchange-alt"></i> Cambiar
+                        </button>` : ''}
+                    </div>
+                `);
+            } else {
+                $('#adjunto-actual').html('<span class="text-muted small">Sin archivo cargado</span>');
+                if (permitirCambiar) {
+                    $('#drop-file-log').show();
+                } else {
+                    $('#drop-file-log').hide();
+                }
+            }
+        }
+
+        window.cambiarAdjuntoLog = function () {
+            $('#adjunto-actual').html('');
+            $('#logArchivoServer').val('');
+            $('#logArchivoUsuario').val('');
+            $('#status-file-log').html('');
+            $('#drop-file-log').show().css({ opacity: '1', 'pointer-events': 'auto' });
+            document.querySelector('#drop-file-log .drop-zone-label').innerHTML =
+                `<i class="fas fa-cloud-upload-alt me-1"></i>Arrastra aquí o <u>haz clic</u>`;
+        };
+    });
+
+    function setupDropZoneLog() {
+        const input = document.getElementById('file-log');
+        const zone = document.getElementById('drop-file-log');
+
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('dragover');
+        });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                const dt = new DataTransfer();
+                dt.items.add(e.dataTransfer.files[0]);
+                input.files = dt.files;
+                subirAdjuntoLog(input);
+                updateDropZoneLabelLog(e.dataTransfer.files[0].name);
+            }
+        });
+
+        input.addEventListener('change', () => {
+            if (input.files.length > 0) {
+                updateDropZoneLabelLog(input.files[0].name);
+                subirAdjuntoLog(input);
+            }
+        });
+    }
+
+    function updateDropZoneLabelLog(filename) {
+        document.querySelector('#drop-file-log .drop-zone-label').innerHTML =
+            `<i class="fas fa-file me-1 text-success"></i><strong>${filename}</strong>`;
+    }
+
+    async function subirAdjuntoLog(input) {
+        const statusDiv = document.getElementById('status-file-log');
+        const files = input.files;
+        const max_kb = 10 * 1000;
+        const formData = new FormData();
+
+        if (!files.length) return;
+
+        statusDiv.innerHTML = `
+            <div class="loading-spinner"></div>
+            <span class="small text-muted">Cargando...</span>
+        `;
+
+        for (let file of files) {
+            if (file.size / 1000 > max_kb) {
+                mostrarErrorLog('Tamaño máximo de archivo: 10 MB');
+                statusDiv.innerHTML = '';
+                return;
+            }
+            formData.append('imgUploader', file, file.name);
+        }
+
+        try {
+            const response = await fetch("{{{ url_upload }}}", { method: 'POST', body: formData });
+            const data = await response.json();
+
+            if (data.flash === 'danger') {
+                statusDiv.innerHTML = '';
+                mostrarErrorLog(data.msg);
+            } else {
+                $('#logArchivoServer').val(data.files[0].archivo_server);
+                $('#logArchivoUsuario').val(data.files[0].archivo_usuario);
+                statusDiv.innerHTML = `
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                    <span class="text-success-app ms-1">Listo</span>
+                `;
+            }
+        } catch (err) {
+            statusDiv.innerHTML = '';
+            mostrarErrorLog('Error al subir el archivo.');
+        }
+    }
+
+    function mostrarErrorLog(msg, tipo = 'danger') {
+        $('#modalLogError').removeClass('alert-danger alert-warning').addClass(`alert-${tipo}`).removeClass('d-none').text(msg);
+    }
+
+    function guardarRevisionLog() {
+        $('#modalLogError').addClass('d-none').text('');
+        $('#btnGuardarLog').prop('disabled', true);
+
+        const id = $('#logId').val();
+        const data = {
+            comentario: $('#logComentario').val().trim(),
+            estatus: Number($('#logEstatus').val()),
+            archivo_server: $('#logArchivoServer').val() || undefined,
+            archivo_usuario: $('#logArchivoUsuario').val() || undefined
+        };
+
+        fetch(`/logs/data/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(dataResponse => {
+            $('#btnGuardarLog').prop('disabled', false);
+            if (dataResponse.flash === 'success') {
+                modalRevisarLog.hide();
+                $('#table').bootstrapTable('refresh');
+            } else if (dataResponse.msg === 'Sin cambios') {
+                mostrarErrorLog('No hiciste ningún cambio.', 'warning');
+            } else {
+                mostrarErrorLog(dataResponse.msg);
+            }
+        })
+        .catch(() => {
+            $('#btnGuardarLog').prop('disabled', false);
+            mostrarErrorLog('Error al guardar la revisión.');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        setupDropZoneLog();
+    });
+</script>

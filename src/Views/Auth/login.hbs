@@ -1,0 +1,84 @@
+{{> headerLogin}}
+<body>
+<div class="vh-100 d-flex align-items-center justify-content-center" style="background-color: #4f81ccbe;">
+    <div class="p-3 p-sm-4 p-md-5 rounded-4 rounded-md-5 shadow-sm border border-secondary-subtle bg-white mx-auto"
+         style="max-width: 1100px;">
+
+        <img src="/img/background/logo.png" class="d-block mx-auto mb-1" style="max-height: 250px; max-width: 300px;">
+
+        {{#if message}}
+            <div class="alert alert-success text-center">{{message}}</div>
+        {{/if}}
+
+        <div id="loginAlert">
+            <div class="alert alert-danger alert-dismissible fade show text-center" style="display: none;" role="alert">
+                <span id="loginAlertText"></span>
+                <button type="button" class="btn-close" onclick="closeAlert(loginAlert)"></button>
+            </div>
+        </div>
+
+        <form>
+            <div class="mb-3 text-start">
+                <label for="email" class="form-label small fw-bold mb-1">Correo electrónico:</label>
+                <input type="email" class="form-control border-secondary-subtle rounded-2 py-2 shadow-sm" id="email"
+                       name="email" placeholder="ejemplo@correo.com" required>
+            </div>
+            <div class="mb-3 text-start position-relative">
+                <label for="password" class="form-label small fw-bold mb-1">Contraseña:</label>
+                <input type="password" class="form-control border-secondary-subtle rounded-2 py-2 shadow-sm pe-5"
+                       id="password" name="password" placeholder="Password" required>
+                <i class="far fa-eye position-absolute" id="eye"
+                   style="right:14px; top:38px; cursor:pointer; color:#aaa; font-size:16px;"></i>
+            </div>
+            <button type="button" class="btn btn-secondary px-4 shadow-sm w-100" style="background-color: #5b73fa;"
+                    onclick="validateLogin()">
+                <i class="h6 fw-normal mb-1 text-center">Login</i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const eye = document.getElementById('eye');
+    const password = document.getElementById('password');
+
+    eye.addEventListener("click", function () {
+        this.classList.toggle("fa-eye-slash");
+        const type = password.getAttribute("type") === "password" ? "text" : "password";
+        password.setAttribute("type", type);
+    });
+
+    function validateLogin() {
+        const correo = $('#email').val();
+        const pass = $('#password').val();
+
+        if (correo == "") {
+            showAlerts(loginAlert, loginAlertText, "Correo requerido");
+            return;
+        }
+        let pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[^\s]+$/;
+        if (pass == "" || !pattern.test(pass)) {
+            showAlerts(loginAlert, loginAlertText, "Ingresa contraseña válida");
+            return;
+        }
+        sendForm(correo, pass);
+    }
+
+    function sendForm(correo, pass) {
+        fetch("{{{action}}}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: correo, password: pass })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.redirect) {
+                location.href = data.redirect;
+            }
+            if (data.flash == "danger") {
+                showAlerts(loginAlert, loginAlertText, data.msg);
+            }
+        });
+    }
+</script>
+{{> footerLogin}}

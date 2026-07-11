@@ -1,0 +1,301 @@
+{{> header }}
+
+<div class="container-fluid py-2 py-md-5 px-3 px-md-4">
+    <div class="p-3 p-md-5 rounded-4 shadow-sm border bg-white">
+        <h2 class="display-6 fw-normal mb-4">Turnos:</h2>
+
+        <div class="d-flex justify-content-between align-items-center mb-4 gap-3">
+            <div class="position-relative" style="max-width: 300px; width: 100%;">
+                <input type="text" id="inputBuscar" class="form-control" placeholder="Buscar en turnos" oninput="buscar(this, document.getElementById('btnLimpiar'), $('#table'))">
+                <button id="btnLimpiar"
+                        class="btn position-absolute top-50 end-0 translate-middle-y border-0 text-muted d-none"
+                        type="button" style="margin-right: 10px;"
+                        onclick="limpiar(document.getElementById('inputBuscar'), this, $('#table'))">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <button type="button" onclick="abrirModalNuevo()" class="btn btn-outline-primary shadow-sm">
+                <span class="d-none d-sm-inline-block">Añadir turno &nbsp;</span>
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+
+        <div class="modal fade" id="modalTurno" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalTurnoTitulo">Nuevo Turno</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="turnoId">
+                        <div id="modalError" class="alert alert-danger d-none" role="alert"></div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Título<span class="text-danger"> *</span></label>
+                            <input type="text" id="titulo" class="form-control border shadow-sm rounded-3" maxlength="200" required>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Inicio<span class="text-danger"> *</span></label>
+                                <input type="time" id="inicio" class="form-control border shadow-sm rounded-3" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Fin<span class="text-danger"> *</span></label>
+                                <input type="time" id="fin" class="form-control border shadow-sm rounded-3" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="modal">
+                            Cancelar &nbsp;<i class="fas fa-undo"></i>
+                        </button>
+                        <button type="button" onclick="validarTurno()" class="btn btn-sm btn-outline-primary">
+                            Guardar &nbsp;<i class="fas fa-save"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <form id="modalEliminarTurnoForm" class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar Acción</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="modalMessage"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="modal">
+                            Cancelar &nbsp;<i class="fas fa-undo"></i>
+                        </button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            Eliminar &nbsp;<i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table id="table" class="table"></table>
+        </div>
+    </div>
+</div>
+
+{{> footer}}
+
+<script src="https://cdn.jsdelivr.net/npm/luxon@2.0.2/build/global/luxon.min.js"></script>
+<script>
+    let turnoAEliminarId = null;
+    let fechaInicioBase = null;
+    let fechaFinBase = null;
+
+    const modalTurno = new bootstrap.Modal(document.getElementById('modalTurno'));
+    const myModal = new bootstrap.Modal(document.getElementById('modalEliminar'));
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function fechaISO(d) {
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    }
+
+    function epochToTimeValue(epochMs) {
+        const d = new Date(epochMs);
+        return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    function epochToFechaBase(epochMs) {
+        return fechaISO(new Date(epochMs));
+    }
+
+    function combinarFechaHora(fechaStr, horaStr) {
+        return new Date(`${fechaStr}T${horaStr}`).getTime();
+    }
+
+    function sumarUnDia(fechaStr) {
+        const d = new Date(`${fechaStr}T00:00`);
+        d.setDate(d.getDate() + 1);
+        return fechaISO(d);
+    }
+
+    function mostrarErrorModal(msg, tipo = 'danger') {
+        $('#modalError').removeClass('alert-danger alert-warning').addClass(`alert-${tipo}`).text(msg).removeClass('d-none');
+    }
+
+    function limpiarErrorModal() {
+        $('#modalError').addClass('d-none').text('');
+    }
+
+    function abrirModalNuevo() {
+        const hoy = fechaISO(new Date());
+        fechaInicioBase = hoy;
+        fechaFinBase = hoy;
+        $('#turnoId').val('');
+        $('#titulo').val('');
+        $('#inicio').val('');
+        $('#fin').val('');
+        limpiarErrorModal();
+        $('#modalTurnoTitulo').text('Nuevo Turno');
+        modalTurno.show();
+    }
+
+    function abrirModalEditar(id, titulo, inicioEpoch, finEpoch) {
+        fechaInicioBase = epochToFechaBase(inicioEpoch);
+        fechaFinBase = epochToFechaBase(finEpoch);
+        $('#turnoId').val(id);
+        $('#titulo').val(titulo);
+        $('#inicio').val(epochToTimeValue(inicioEpoch));
+        $('#fin').val(epochToTimeValue(finEpoch));
+        limpiarErrorModal();
+        $('#modalTurnoTitulo').text('Editar Turno');
+        modalTurno.show();
+    }
+
+    function validarTurno() {
+        limpiarErrorModal();
+
+        const id = $('#turnoId').val();
+        const titulo = $('#titulo').val().trim();
+        const inicioVal = $('#inicio').val();
+        const finVal = $('#fin').val();
+
+        if (titulo.length < 1) {
+            $('#titulo').focus();
+            mostrarErrorModal("El título es requerido.");
+            return;
+        }
+        if (inicioVal === "") {
+            $('#inicio').focus();
+            mostrarErrorModal("La hora de inicio es requerida.");
+            return;
+        }
+        if (finVal === "") {
+            $('#fin').focus();
+            mostrarErrorModal("La hora de fin es requerida.");
+            return;
+        }
+
+        const inicio = combinarFechaHora(fechaInicioBase, inicioVal);
+        let fin = combinarFechaHora(fechaFinBase, finVal);
+
+        if (fin <= inicio) {
+            fechaFinBase = sumarUnDia(fechaInicioBase);
+            fin = combinarFechaHora(fechaFinBase, finVal);
+        }
+
+        const data = { titulo, inicio, fin };
+        const url = id ? `/turnos/data/${id}` : '/turnos/data';
+        const method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(dataResponse => {
+            if (dataResponse.ok && dataResponse.msg === 'sin cambios') {
+                mostrarErrorModal('No hiciste ningún cambio.', 'warning');
+            } else if (dataResponse.ok) {
+                modalTurno.hide();
+                $('#table').bootstrapTable('refresh');
+            } else {
+                mostrarErrorModal(dataResponse.msg);
+            }
+        })
+        .catch(() => {
+            mostrarErrorModal("Error al guardar el turno.");
+        });
+    }
+
+    $(document).ready(function () {
+        $('#table').bootstrapTable({
+            url: "{{{ url_data }}}",
+            search: true,
+            pagination: true,
+            serverSort: true,
+            sidePagination: "server",
+            searchHighlight: true,
+            showSearchClearButton: true,
+            showExtendedPagination: true,
+            pageSize: 50,
+            sortName: 'inicio',
+            sortOrder: 'desc',
+            queryParams: queryParams,
+            searchSelector: "#inputBuscar",
+            responseHandler: responseHandler,
+            columns: [
+                { field: 'titulo', title: 'Título', sortable: true },
+                {
+                    field: 'inicio', title: 'Inicio', sortable: true,
+                    formatter: function (value) {
+                        return luxon.DateTime.fromMillis(Number(value)).toFormat('HH:mm');
+                    }
+                },
+                {
+                    field: 'fin', title: 'Fin', sortable: true,
+                    formatter: function (value) {
+                        return luxon.DateTime.fromMillis(Number(value)).toFormat('HH:mm');
+                    }
+                },
+                {
+                    field: 'acciones', title: 'Acciones', align: 'center',
+                    formatter: function (value, row) {
+                        return `
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary btn-editar"
+                                    data-id="${row.id}" data-titulo="${row.titulo}"
+                                    data-inicio="${row.inicio}" data-fin="${row.fin}" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger btn-eliminar"
+                                    data-id="${row.id}" data-titulo="${row.titulo}" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                    }
+                },
+            ],
+            formatNoMatches: function () { return 'No se encontraron turnos'; },
+            formatLoadingMessage: function () { return 'Cargando, espere por favor'; }
+        });
+
+        $(document).on('click', '.btn-editar', function () {
+            abrirModalEditar(
+                $(this).data('id'),
+                $(this).data('titulo'),
+                Number($(this).data('inicio')),
+                Number($(this).data('fin'))
+            );
+        });
+
+        $(document).on('click', '.btn-eliminar', function () {
+            turnoAEliminarId = $(this).data('id');
+            document.getElementById('modalMessage').innerHTML =
+                `¿Está seguro que desea eliminar el turno <strong>${$(this).data('titulo')}</strong>?`;
+            myModal.show();
+        });
+
+        document.getElementById('modalEliminarTurnoForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            fetch(`/turnos/data/${turnoAEliminarId}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(dataResponse => {
+                    myModal.hide();
+                    if (dataResponse.ok) {
+                        $('#table').bootstrapTable('refresh');
+                    } else {
+                        showAlerts(dangerAlert, dangerMessage, dataResponse.msg);
+                    }
+                })
+                .catch(() => {
+                    myModal.hide();
+                    showAlerts(dangerAlert, dangerMessage, "Error al eliminar el turno.");
+                });
+        });
+    });
+</script>

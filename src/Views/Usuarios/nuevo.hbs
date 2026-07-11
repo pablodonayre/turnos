@@ -1,0 +1,204 @@
+{{> header}}
+
+<div class="container py-3 py-md-5">
+    <div class="p-3 p-sm-4 p-md-5 rounded-4 rounded-md-5 shadow-sm border border-secondary-subtle bg-white">
+
+        {{> alerts}}
+
+        <div class="d-flex justify-content-between align-items-center mb-4 gap-3">
+            <h2 class="h3 mb-0">Usuario Nuevo:</h2>
+            <div class="d-flex gap-2">
+                <button type="button" onclick="validateNuevo()" class="btn btn-outline-primary d-flex align-items-center justify-content-center shadow-sm">
+                    <span class="d-none d-sm-inline-block">Guardar &nbsp;</span>
+                    <i class="fas fa-save"></i>
+                </button>
+                <a class="btn btn-outline-danger d-flex align-items-center justify-content-center shadow-sm" href="/usuario">
+                    <span class="d-none d-sm-inline-block">Cancelar &nbsp;</span>
+                    <i class="fas fa-undo"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="border border-1 rounded-4 p-3 p-md-4 mb-4 shadow-sm">
+            <h3 class="h5 mb-4 text-success fw-bold">Información Personal</h3>
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre<span class="text-danger"> *</span></label>
+                        <input type="text" id="nombre" class="form-control border shadow-sm rounded-3" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Apellido<span class="text-danger"> *</span></label>
+                        <input type="text" id="apellido" class="form-control border shadow-sm rounded-3" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email<span class="text-danger"> *</span></label>
+                        <input type="text" id="correo" placeholder="ejemplo@correo.com" class="form-control border shadow-sm rounded-3" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Contraseña<span class="text-danger"> *</span></label>
+                        <input type="text" id="password" class="form-control border shadow-sm rounded-3" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Celular</label>
+                        <input type="text" id="celular" class="form-control border shadow-sm rounded-3">
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Rol<span class="text-danger"> *</span></label>
+                        <select id="rol" class="form-select border shadow-sm rounded-3" required>
+                            <option value="USER">USER</option>
+                            <option value="ADMIN">ADMIN</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Estatus</label>
+                        <select id="estatus" class="form-select border shadow-sm rounded-3">
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Fecha de Nacimiento</label>
+                        <input type="date" id="fecha_nacimiento" class="form-control border shadow-sm rounded-3">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Sueldo<span class="text-danger"> *</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 rounded-start-3">S/</span>
+                            <input type="number" step="0.01" id="sueldo" class="form-control border shadow-sm rounded-end-3 border-start-0" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Fecha de Ingreso</label>
+                        <input type="date" id="fecha_ingreso" class="form-control border shadow-sm rounded-3">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="border border-1 rounded-4 p-3 p-md-4 mb-4 shadow-sm">
+            <h3 class="h5 mb-4 text-success fw-bold">Calendario</h3>
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-bold">ID de calendario (Google)<span class="text-danger"> *</span></label>
+                    <input type="text" id="id_calendario" class="form-control border shadow-sm rounded-3" placeholder="ej: abc123@group.calendar.google.com">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-bold">Hora de ingreso<span class="text-danger"> *</span></label>
+                    <input type="time" id="ingreso" class="form-control border shadow-sm rounded-3">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-bold">Hora de salida<span class="text-danger"> *</span></label>
+                    <input type="time" id="salida" class="form-control border shadow-sm rounded-3">
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" onclick="validateNuevo()" class="btn btn-outline-primary d-flex align-items-center justify-content-center shadow-sm">
+                <span class="d-none d-sm-inline-block">Guardar &nbsp;</span>
+                <i class="fas fa-save"></i>
+            </button>
+            <a class="btn btn-outline-danger d-flex align-items-center justify-content-center shadow-sm" href="/usuario">
+                <span class="d-none d-sm-inline-block">Cancelar &nbsp;</span>
+                <i class="fas fa-undo"></i>
+            </a>
+        </div>
+
+    </div>
+</div>
+
+{{> footer}}
+
+<script>
+
+    function validateNuevo() {
+        const nombre = $('#nombre').val().trim();
+        const apellido = $('#apellido').val().trim();
+        const correo = $('#correo').val().trim();
+        const password = $('#password').val().trim();
+        const sueldo = $('#sueldo').val().trim();
+        const celular = $('#celular').val().trim();
+        const id_calendario = $('#id_calendario').val().trim();
+        const ingreso = $('#ingreso').val();
+        const salida = $('#salida').val();
+
+        if (nombre.length < 3) { 
+            $('#nombre').focus();
+            showAlerts(dangerAlert, dangerMessage, "Nombre requerido, mínimo 3 caracteres."); return; 
+        }
+        if (apellido.length < 2) { 
+            $('#apellido').focus();
+            showAlerts(dangerAlert, dangerMessage, "Apellido requerido."); return; 
+        }
+
+        let correoPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!correoPattern.test(correo)) { 
+            $('#correo').focus();
+            showAlerts(dangerAlert, dangerMessage, "Ingresa un correo válido."); return; 
+        }
+
+        let passPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[^\s]+$/;
+        if (password === "" || !passPattern.test(password)) {
+            $('#password').focus();
+            showAlerts(dangerAlert, dangerMessage, "Ingresa una contraseña válida (mayúscula, minúscula, número y símbolo).");
+            return;
+        }
+
+        if (sueldo == "") { 
+            $('#sueldo').focus();
+            showAlerts(dangerAlert, dangerMessage, "Ingrese su sueldo");
+            return;
+        }
+
+        let phonePattern = /^[0-9]{9}$/;
+        if (celular !== "" && !phonePattern.test(celular)) {
+            $('#celular').focus();
+            showAlerts(dangerAlert, dangerMessage, "El número de celular debe tener 9 dígitos");
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
+        if (id_calendario === "") {
+            $('#id_calendario').focus();
+            showAlerts(dangerAlert, dangerMessage, "El ID de calendario es requerido."); return;
+        }
+        if (ingreso === "") {
+            $('#ingreso').focus();
+            showAlerts(dangerAlert, dangerMessage, "La hora de ingreso es requerida."); return;
+        }
+        if (salida === "") {
+            $('#salida').focus();
+            showAlerts(dangerAlert, dangerMessage, "La hora de salida es requerida."); return;
+        }
+
+        const data = {
+            nombre, apellido, correo, password,
+            rol: $('#rol').val(),
+            estatus: $('#estatus').val(),
+            sueldo: $('#sueldo').val(),
+            celular: $('#celular').val(),
+            fecha_nacimiento: $('#fecha_nacimiento').val() ? luxon.DateTime.fromISO($('#fecha_nacimiento').val()).toUTC().ts : 0,
+            fecha_ingreso: $('#fecha_ingreso').val() ? luxon.DateTime.fromISO($('#fecha_ingreso').val()).toUTC().ts : 0,
+            id_calendario: $('#id_calendario').val(),
+            ingreso: timeToMs($('#ingreso').val()),
+            salida: timeToMs($('#salida').val())
+        };
+
+        fetch("/usuario/guardar", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data })
+        })
+        .then(res => res.json())
+        .then(dataResponse => {
+            if (dataResponse.flash == "danger") {
+                showAlerts(dangerAlert, dangerMessage, dataResponse.msg);
+            } else {
+                location.href = "/usuario";
+            }
+        });
+    }
+</script>

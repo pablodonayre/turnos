@@ -1,0 +1,26 @@
+version: "3"
+services:
+  shift:
+    build: .
+    restart: "unless-stopped"
+    env_file:
+       - "./.env"
+    volumes:
+       - ./src:/app      
+       - /app/node_modules
+    ports:
+       - "8086:3000"
+    command: npm run start
+
+
+
+  # mysql:   
+  #   image: 'mysql:5.7'
+  #   restart: "unless-stopped"
+  #   env_file:
+  #     - "./.env"
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - "./database/mysql/init:/docker-entrypoint-initdb.d"
+  #     - "./database/mysql/data:/var/lib/mysql/"
