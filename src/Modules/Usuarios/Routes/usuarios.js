@@ -52,13 +52,14 @@ router.get('/data', checkAuthenticatedApi, async (req, res) => {
             correo: "correo",
             rol: "rol",
             estado: "estado",
+            uid: "uid"
         }
 
         const sortColumn = allowedSort[sort] || "creado_fecha";
         const sortOrder = order === "desc" ? "DESC" : "ASC";
 
         const totalRows = await db_single(`SELECT COUNT(*) as total FROM usuarios`);
-        const rows = await db_single(`SELECT id, nombre, apellido, correo, rol, estatus, id_calendario 
+        const rows = await db_single(`SELECT id, nombre, apellido, correo, rol, estatus, id_calendario, uid 
             FROM usuarios ${where} 
             ORDER BY ${ sortColumn } ${ sortOrder } 
             LIMIT ?  OFFSET ?`,
@@ -101,7 +102,7 @@ router.post('/nuevo', trimRequest.body, checkAuthenticated, checkAdmin, async (r
         }
 
         const { nombre, apellido, correo, password, rol, estatus, sueldo, celular,
-                fecha_nacimiento, fecha_ingreso, id_calendario, ingreso, salida } = value;
+                fecha_nacimiento, fecha_ingreso, id_calendario, ingreso, salida, uid } = value;
 
         const existe = await db_single('SELECT id FROM usuarios WHERE correo = ? LIMIT 1', [correo]);
         if (existe.length > 0) {
@@ -114,11 +115,11 @@ router.post('/nuevo', trimRequest.body, checkAuthenticated, checkAdmin, async (r
 
         await db_single(
             `INSERT INTO usuarios
-            (nombre, apellido, correo, password, rol, estatus, sueldo, celular, fecha_nacimiento, fecha_ingreso, id_calendario, ingreso, salida, creado_fecha, creado_por, token)
+            (nombre, apellido, correo, password, rol, estatus, sueldo, celular, fecha_nacimiento, fecha_ingreso, id_calendario, ingreso, salida, creado_fecha, creado_por, token, uid)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [nombre, apellido, correo, hash, rol, estatusVal, sueldo, celular,
             fecha_nacimiento, fecha_ingreso, id_calendario,
-            ingreso, salida, ahora, req.session.user.user_id, '']
+            ingreso, salida, ahora, req.session.user.user_id, '', uid]
         );
 
         return res.json({ flash: 'success', msg: 'Usuario creado correctamente.' });
@@ -212,6 +213,10 @@ router.put('/editar/:id/info', trimRequest.body, checkAuthenticated, checkAdmin,
         if (data.fecha_ingreso != undefined) {
             sql += values.length > 0 ? ', fecha_ingreso = ?' : 'fecha_ingreso = ?';
             values.push(data.fecha_ingreso);
+        }
+        if (data.uid != undefined) {
+            sql += values.length > 0 ? ', uid = ?' : 'uid = ?';
+            values.push(data.uid);
         }
 
         if (values.length === 0) {

@@ -56,6 +56,10 @@
                         <label class="form-label small fw-bold">Celular</label>
                         <input type="text" id="celular" class="form-control border shadow-sm rounded-3" readonly>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">UID</label>
+                        <input type="text" id="uid" class="form-control border shadow-sm rounded-3" readonly>
+                    </div>
                 </div>
                 <div class="col-12 col-md-6">
                     <div class="mb-3">
@@ -154,6 +158,7 @@
         $('#estatus').val(usuario.estatus == 1 ? "Activo" : "Inactivo");
         $('#sueldo').val(usuario.sueldo);
         $('#celular').val(usuario.celular);
+        $('#uid').val(usuario.uid);
         $('#fecha_nacimiento').val(usuario.fecha_nacimiento ? luxon.DateTime.fromMillis(usuario.fecha_nacimiento).toFormat('yyyy-MM-dd') : '');
         $('#fecha_ingreso').val(usuario.fecha_ingreso ? luxon.DateTime.fromMillis(usuario.fecha_ingreso).toFormat('yyyy-MM-dd') : '');
     }
@@ -174,7 +179,7 @@
     function editarInfo() {
         $('#editarInfoBtn').addClass('d-none');
         $('#guardarInfoBtn, #cancelarInfoBtn').removeClass('d-none').addClass('d-flex');
-        $('#nombre, #apellido, #correo, #password, #celular, #fecha_nacimiento, #sueldo, #fecha_ingreso').removeAttr('readonly');
+        $('#nombre, #apellido, #correo, #password, #celular, #fecha_nacimiento, #sueldo, #fecha_ingreso, #uid').removeAttr('readonly');
         $('#rol, #estatus').removeAttr('disabled');
     }
 
@@ -183,7 +188,7 @@
             usuario_data = usuario;
             pintarInfo(usuario);
         });
-        $('#nombre, #apellido, #correo, #password, #celular, #fecha_nacimiento, #sueldo, #fecha_ingreso').attr('readonly', true);
+        $('#nombre, #apellido, #correo, #password, #celular, #fecha_nacimiento, #sueldo, #fecha_ingreso, #uid').attr('readonly', true);
         $('#rol, #estatus').attr('disabled', true);
         $('#editarInfoBtn').removeClass('d-none').addClass('d-flex');
         $('#guardarInfoBtn, #cancelarInfoBtn').removeClass('d-flex').addClass('d-none');
@@ -198,6 +203,7 @@
         const estatus = $('#estatus').val();
         const sueldo = $('#sueldo').val();
         const celular = $('#celular').val();
+        const uid = $('#uid').val();
         const fecha_nacimiento = $('#fecha_nacimiento').val();
         const fecha_ingreso = $('#fecha_ingreso').val();
 
@@ -243,6 +249,12 @@
             $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
             return;
         }
+        if (uid.length < 2 || uid.length > 25) {
+            $('#uid').focus();
+            showAlerts(infoAlert, infoText, "UID es requerido, mínimo 2 caracteres máximo 25");
+            $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
+            return;
+        }
 
         const fecha_nacimiento_ms = fecha_nacimiento ? luxon.DateTime.fromISO(fecha_nacimiento).toUTC().ts : 0;
         const fecha_ingreso_ms = fecha_ingreso ? luxon.DateTime.fromISO(fecha_ingreso).toUTC().ts : 0;
@@ -256,6 +268,8 @@
         if (estatus != (usuario_data.estatus == 1 ? "Activo" : "Inactivo")) cambios.estatus = estatus;
         if (String(sueldo) != String(usuario_data.sueldo)) cambios.sueldo = sueldo;
         if (celular != usuario_data.celular) cambios.celular = celular;
+        if (uid != usuario_data.uid) cambios.uid = uid;
+
         if (fecha_nacimiento_ms != (usuario_data.fecha_nacimiento || 0)) cambios.fecha_nacimiento = fecha_nacimiento_ms;
         if (fecha_ingreso_ms != (usuario_data.fecha_ingreso || 0)) cambios.fecha_ingreso = fecha_ingreso_ms;
 

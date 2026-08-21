@@ -50,7 +50,16 @@ const usuarioSchema = Joi.object({
     fecha_ingreso: Joi.number().empty('').default(0),
     id_calendario: Joi.string().allow('').default(''),
     ingreso: Joi.number().empty('').default(0),
-    salida: Joi.number().empty('').default(0)
+    salida: Joi.number().empty('').default(0),
+    uid: Joi.string()
+        .min(2)
+        .max(25)
+        .required()
+        .messages({
+            "string.empty": "El UID es obligatorio",
+            "string.min": "El UID debe tener mínimo 2 caracteres.",
+            "string.max": "El UID debe tener máximo 25 caracteres."
+        }),
 });
 
 module.exports = { usuarioSchema };

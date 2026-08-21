@@ -43,6 +43,10 @@
                         <label class="form-label small fw-bold">Celular</label>
                         <input type="text" id="celular" class="form-control border shadow-sm rounded-3">
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">UID</label>
+                        <input type="text" id="uid" class="form-control border shadow-sm rounded-3">
+                    </div>
                 </div>
 
                 <div class="col-12 col-md-6">
@@ -122,6 +126,7 @@
         const password = $('#password').val().trim();
         const sueldo = $('#sueldo').val().trim();
         const celular = $('#celular').val().trim();
+        const uid = $('#uid').val().trim();
         const id_calendario = $('#id_calendario').val().trim();
         const ingreso = $('#ingreso').val();
         const salida = $('#salida').val();
@@ -161,6 +166,13 @@
             $('#guardarInfoBtn').prop('disabled', false).removeClass('disabled');
             return;
         }
+
+        if(!uid || uid.length <2){
+            $('#uid').focus();
+            showAlerts(dangerAlert, dangerMessage, "El UID es requerido");
+            return;
+        }
+        
         if (id_calendario === "") {
             $('#id_calendario').focus();
             showAlerts(dangerAlert, dangerMessage, "El ID de calendario es requerido."); return;

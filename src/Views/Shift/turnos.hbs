@@ -21,7 +21,7 @@
         </div>
 
         <div class="modal fade" id="modalTurno" tabindex="-1">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="modalTurnoTitulo">Nuevo Turno</h5>
@@ -30,20 +30,48 @@
                     <div class="modal-body">
                         <input type="hidden" id="turnoId">
                         <div id="modalError" class="alert alert-danger d-none" role="alert"></div>
+
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Título<span class="text-danger"> *</span></label>
                             <input type="text" id="titulo" class="form-control border shadow-sm rounded-3" maxlength="200" required>
                         </div>
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <label class="form-label small fw-bold">Inicio<span class="text-danger"> *</span></label>
-                                <input type="time" id="inicio" class="form-control border shadow-sm rounded-3" required>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-bold">Fin<span class="text-danger"> *</span></label>
-                                <input type="time" id="fin" class="form-control border shadow-sm rounded-3" required>
-                            </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Tipo de turno<span class="text-danger"> *</span></label>
+                            <select id="tipoTurno" class="form-select border shadow-sm rounded-3" onchange="cambiarTipoTurno()">
+                                <option value="fijo">Fijo</option>
+                                <option value="rotativo">Rotativo</option>
+                                <option value="libre">Libre</option>
+                            </select>
                         </div>
+
+                        {{! Turno Fijo }}
+
+                        <div id="seccionFijo">
+                            <div id="gruposFijo"></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="agregarGrupoFijo()">
+                                <i class="fas fa-plus"></i> &nbsp;Agregar horario
+                            </button>
+                        </div>
+
+                        {{! Turno Rotativo }}
+
+                        <div id="seccionRotativo" class="d-none">
+                            <label class="form-label small fw-bold">Semana:</label>
+                            <div id="filasRotativo"></div>
+                        </div>
+
+                        {{! Turno Libre }}
+
+                        <div id="seccionLibre" class="d-none">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Seleccione año y mes<span class="text-danger"> *</span></label>
+                                <input type="month" id="libreAnioMes" class="form-control border shadow-sm rounded-3" onchange="generarDiasLibre()">
+                            </div>
+                            <label class="form-label small fw-bold">Día:</label>
+                            <div id="filasLibre"></div>
+                        </div>
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="modal">
@@ -90,35 +118,26 @@
 <script src="https://cdn.jsdelivr.net/npm/luxon@2.0.2/build/global/luxon.min.js"></script>
 <script>
     let turnoAEliminarId = null;
-    let fechaInicioBase = null;
-    let fechaFinBase = null;
+    
+    const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const DIAS_CORTO = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'];
 
     const modalTurno = new bootstrap.Modal(document.getElementById('modalTurno'));
     const myModal = new bootstrap.Modal(document.getElementById('modalEliminar'));
 
+    let contadorGrupoFijo = 0;
+
     function pad2(n) { return String(n).padStart(2, '0'); }
 
-    function fechaISO(d) {
-        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    }
-
-    function epochToTimeValue(epochMs) {
-        const d = new Date(epochMs);
-        return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-    }
-
-    function epochToFechaBase(epochMs) {
-        return fechaISO(new Date(epochMs));
-    }
-
-    function combinarFechaHora(fechaStr, horaStr) {
-        return new Date(`${fechaStr}T${horaStr}`).getTime();
-    }
-
-    function sumarUnDia(fechaStr) {
-        const d = new Date(`${fechaStr}T00:00`);
-        d.setDate(d.getDate() + 1);
-        return fechaISO(d);
+    function opcionesHora(seleccionado) {
+        let html = '';
+        for (let h = 0; h < 24; h++) {
+            for (let m = 0; m < 60; m += 30) {
+                const val = `${pad2(h)}:${pad2(m)}`;
+                html += `<option value="${val}" ${val === seleccionado ? 'selected' : ''}>${val}</option>`;
+            }
+        }
+        return html;
     }
 
     function mostrarErrorModal(msg, tipo = 'danger') {
@@ -129,29 +148,244 @@
         $('#modalError').addClass('d-none').text('');
     }
 
+    // cambio de tipo
+    function cambiarTipoTurno() {
+        const tipo = $('#tipoTurno').val();
+        $('#seccionFijo').toggleClass('d-none', tipo !== 'fijo');
+        $('#seccionRotativo').toggleClass('d-none', tipo !== 'rotativo');
+        $('#seccionLibre').toggleClass('d-none', tipo !== 'libre');
+    }
+
+    // TURNO FIJO
+    function agregarGrupoFijo(diasSeleccionados = [], inicio = '', fin = '') {
+        contadorGrupoFijo++;
+        const grupoId = `grupoFijo_${contadorGrupoFijo}`;
+
+        const botonesDias = DIAS_CORTO.map((d, i) => `
+            <button type="button" class="btn btn-sm dia-toggle ${diasSeleccionados.includes(i) ? 'btn-primary' : 'btn-outline-secondary'}"
+                data-dia="${i}" onclick="toggleDiaFijo(this)">${d}</button>
+        `).join(' ');
+
+        const esPrimero = $('#gruposFijo .grupo-fijo').length === 0;
+
+        const html = `
+            <div class="grupo-fijo" id="${grupoId}">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex flex-wrap gap-1">${botonesDias}</div>
+                    ${esPrimero ? '' : `
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="$('#${grupoId}').remove()">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `}
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Inicio<span class="text-danger"> *</span></label>
+                        <input type="time" class="form-control border shadow-sm rounded-3 fijo-inicio" value="${inicio}" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Fin<span class="text-danger"> *</span></label>
+                        <input type="time" class="form-control border shadow-sm rounded-3 fijo-fin" value="${fin}" required>
+                    </div>
+                </div>
+            </div>
+        `;
+        $('#gruposFijo').append(html);
+    }
+
+    function toggleDiaFijo(btn) {
+        $(btn).toggleClass('btn-primary btn-outline-secondary');
+    }
+
+    function limpiarFijo() {
+        $('#gruposFijo').empty();
+        contadorGrupoFijo = 0;
+        agregarGrupoFijo([0, 1, 2, 3, 4]);  // lunes - viernes por defecto
+        agregarGrupoFijo([5]);   // sabado por defecto
+    }
+
+    // TURNO ROTATIVO
+
+    function renderRotativo(horarios = null) {
+        let html = '';
+        DIAS.forEach((dia, i) => {
+            const inicio = horarios && horarios[i] ? horarios[i].inicio : '08:00';
+            const fin = horarios && horarios[i] ? horarios[i].fin : '16:00';
+            html += `
+                <div class="fila-rotativo" data-dia="${i}">
+                    <span style="min-width: 90px;">${dia}</span>
+                    <select class="form-select form-select-sm rotativo-inicio" style="max-width: 110px;">
+                        ${opcionesHora(inicio)}
+                    </select>
+                    <select class="form-select form-select-sm rotativo-fin" style="max-width: 110px;">
+                        ${opcionesHora(fin)}
+                    </select>
+                    ${i === 0
+                        ? `<button type="button" class="btn btn-sm btn-outline-secondary" title="Copiar a todos los días" onclick="copiarRotativoATodos()"><i class="fas fa-copy"></i></button>`
+                        : `<button type="button" class="btn btn-sm btn-outline-secondary" title="Restablecer" onclick="resetFilaRotativo(${i})"><i class="far fa-calendar"></i></button>`
+                    }
+                </div>
+            `;
+        });
+        $('#filasRotativo').html(html);
+    }
+
+    function copiarRotativoATodos() {
+        const primeraInicio = $('.fila-rotativo[data-dia="0"] .rotativo-inicio').val();
+        const primeraFin = $('.fila-rotativo[data-dia="0"] .rotativo-fin').val();
+        $('.fila-rotativo').each(function () {
+            $(this).find('.rotativo-inicio').val(primeraInicio);
+            $(this).find('.rotativo-fin').val(primeraFin);
+        });
+    }
+
+    function resetFilaRotativo(i) {
+        $(`.fila-rotativo[data-dia="${i}"] .rotativo-inicio`).val('08:00');
+        $(`.fila-rotativo[data-dia="${i}"] .rotativo-fin`).val('08:00');
+    }
+
+    // TURNO LIBRE
+
+    function nombreDiaSemana() {
+        return DIAS[(fecha.getDay() + 6) % 7];     // getDay():   0 -> domingo
+    }
+
+    function generarDiasLibre(horariosPrevios = null) {
+        const anioMes = $('#libreAnioMes').val();
+        if (!anioMes) { $('#filasLibre').empty(); return; }
+
+        const [anio, mes] = anioMes.split('-').map(Number);
+        const totalDias = new Date(anio, mes, 0).getDate();
+
+        let html = '';
+        for (let dia = 1; dia <= totalDias; dia++) {
+            const fecha = new Date(anio, mes - 1, dia);
+            const prev = horariosPrevios ? horariosPrevios[dia] : null;
+            const inicio = prev ? prev.inicio : '08:00';
+            const fin = prev ? prev.fin : '16:00';
+            const activo = !prev || prev.activo !== false;
+
+            html += `
+                <div class="fila-libre" data-dia="${dia}">
+                    <span class="dia-num">${pad2(dia)}</span>
+                    <span class="dia-nombre">${nombreDiaSemana(fecha)}</span>
+                    <select class="form-select form-select-sm libre-inicio" style="max-width: 110px;" ${activo ? '' : 'disabled'}>
+                        ${opcionesHora(inicio)}
+                    </select>
+                    <select class="form-select form-select-sm libre-fin" style="max-width: 110px;" ${activo ? '' : 'disabled'}>
+                        ${opcionesHora(fin)}
+                    </select>
+                    ${dia === 1
+                        ? `<button type="button" class="btn btn-sm btn-outline-secondary" title="Copiar a todos los días" onclick="copiarLibreATodos()"><i class="fas fa-copy"></i></button>`
+                        : `<button type="button" class="btn btn-sm btn-outline-danger toggle-libre-dia" title="Quitar este día" data-activo="${activo}" onclick="toggleDiaLibre(this)"><i class="fas fa-trash"></i></button>`
+                    }
+                </div>
+            `;
+        }
+        $('#filasLibre').html(html);
+    }
+
+    function copiarLibreATodos() {
+        const primeraInicio = $('.fila-libre[data-dia="1"] .libre-inicio').val();
+        const primeraFin = $('.fila-libre[data-dia="1"] .libre-fin').val();
+        $('.fila-libre').each(function () {
+            $(this).find('.libre-inicio').val(primeraInicio);
+            $(this).find('.libre-fin').val(primeraFin);
+        });
+    }
+//s
+    function toggleDiaLibre(btn) {
+        const $fila = $(btn).closest('.fila-libre');
+        const activo = $(btn).data('activo') === true || $(btn).data('activo') === 'true';
+        $fila.find('select').prop('disabled', activo);
+        $fila.toggleClass('opacity-50', activo);
+        $(btn).data('activo', !activo);
+    }
+
     function abrirModalNuevo() {
-        const hoy = fechaISO(new Date());
-        fechaInicioBase = hoy;
-        fechaFinBase = hoy;
         $('#turnoId').val('');
         $('#titulo').val('');
-        $('#inicio').val('');
-        $('#fin').val('');
+        $('#tipoTurno').val('fijo');
         limpiarErrorModal();
+
+        limpiarFijo();
+        renderRotativo();
+        $('#libreAnioMes').val('');
+        $('#filasLibre').empty();
+        
+        cambiarTipoTurno();
         $('#modalTurnoTitulo').text('Nuevo Turno');
         modalTurno.show();
     }
 
-    function abrirModalEditar(id, titulo, inicioEpoch, finEpoch) {
-        fechaInicioBase = epochToFechaBase(inicioEpoch);
-        fechaFinBase = epochToFechaBase(finEpoch);
-        $('#turnoId').val(id);
-        $('#titulo').val(titulo);
-        $('#inicio').val(epochToTimeValue(inicioEpoch));
-        $('#fin').val(epochToTimeValue(finEpoch));
+    function abrirModalEditar(turno) {
+        $('#turnoId').val(turno.id);
+        $('#titulo').val(turno.titulo);
+        $('#tipoTurno').val(turno.tipo);
         limpiarErrorModal();
+
+        $('#gruposFijo').empty();
+        contadorGrupoFijo = 0;
+        if (turno.tipo === 'fijo' && turno.fijo && turno.fijo.length) {
+            turno.fijo.forEach(g => agregarGrupoFijo(g.dias, g.inicio, g.fin));
+        } else {
+            agregarGrupoFijo();
+        }
+
+        renderRotativo(turno.tipo === 'rotativo' ? turno.rotativo : null);
+
+        if (turno.tipo === 'libre' && turno.libre) {
+            $('#libreAnioMes').val(turno.libre.anioMes);
+            generarDiasLibre(turno.libre.dias);
+        } else {
+            $('#libreAnioMes').val('');
+            $('#filasLibre').empty();
+        }
+
+        cambiarTipoTurno();
         $('#modalTurnoTitulo').text('Editar Turno');
         modalTurno.show();
+    }
+
+    function recolectarFijo() {
+        const grupos = [];
+        $('#gruposFijo .grupo-fijo').each(function () {
+            const dias = [];
+            $(this).find('.dia-toggle.btn-primary').each(function () {
+                dias.push(Number($(this).data('dia')));
+            });
+            grupos.push({
+                dias,
+                inicio: $(this).find('.fijo-inicio').val(),
+                fin: $(this).find('.fijo-fin').val()
+            });
+        });
+        return grupos;
+    }
+
+    function recolectarRotativo() {
+        const horarios = [];
+        $('.fila-rotativo').each(function () {
+            horarios.push({
+                inicio: $(this).find('.rotativo-inicio').val(),
+                fin: $(this).find('.rotativo-fin').val()
+            });
+        });
+        return horarios;
+    }
+
+    function recolectarLibre() {
+        const dias = {};
+        $('.fila-libre').each(function () {
+            const dia = $(this).data('dia');
+            const activo = !$(this).find('select').prop('disabled');
+            dias[dia] = {
+                activo,
+                inicio: $(this).find('.libre-inicio').val(),
+                fin: $(this).find('.libre-fin').val()
+            };
+        });
+        return { anioMes: $('#libreAnioMes').val(), dias };
     }
 
     function validarTurno() {
@@ -159,34 +393,43 @@
 
         const id = $('#turnoId').val();
         const titulo = $('#titulo').val().trim();
-        const inicioVal = $('#inicio').val();
-        const finVal = $('#fin').val();
+        const tipo = $('#tipoTurno').val();
 
         if (titulo.length < 1) {
             $('#titulo').focus();
             mostrarErrorModal("El título es requerido.");
             return;
         }
-        if (inicioVal === "") {
-            $('#inicio').focus();
-            mostrarErrorModal("La hora de inicio es requerida.");
-            return;
-        }
-        if (finVal === "") {
-            $('#fin').focus();
-            mostrarErrorModal("La hora de fin es requerida.");
-            return;
+
+        const data = { titulo, tipo };
+
+        if (tipo === 'fijo') {
+            const grupos = recolectarFijo();
+            for (const g of grupos) {
+                if (!g.dias.length) {
+                    mostrarErrorModal("Selecciona al menos un día en cada horario.");
+                    return;
+                }
+                if (!g.inicio || !g.fin) {
+                    mostrarErrorModal("Completa inicio y fin en cada horario.");
+                    return;
+                }
+                if (!g.fin || !g.inicio) {
+                    mostrarErrorModal("La hra de fin debe ser posterior a la hora de inicio en cada horario.");
+                    return;
+                }
+            }
+            data.fijo = grupos;
+        } else if (tipo === 'rotativo') {
+            data.rotativo = recolectarRotativo();
+        } else if (tipo === 'libre') {
+            if (!$('#libreAnioMes').val()) {
+                mostrarErrorModal("Selecciona año y mes.");
+                return;
+            }
+            data.libre = recolectarLibre();
         }
 
-        const inicio = combinarFechaHora(fechaInicioBase, inicioVal);
-        let fin = combinarFechaHora(fechaFinBase, finVal);
-
-        if (fin <= inicio) {
-            fechaFinBase = sumarUnDia(fechaInicioBase);
-            fin = combinarFechaHora(fechaFinBase, finVal);
-        }
-
-        const data = { titulo, inicio, fin };
         const url = id ? `/turnos/data/${id}` : '/turnos/data';
         const method = id ? 'PUT' : 'POST';
 
@@ -222,7 +465,7 @@
             showSearchClearButton: true,
             showExtendedPagination: true,
             pageSize: 50,
-            sortName: 'inicio',
+            sortName: 'titulo',
             sortOrder: 'desc',
             queryParams: queryParams,
             searchSelector: "#inputBuscar",
@@ -230,15 +473,10 @@
             columns: [
                 { field: 'titulo', title: 'Título', sortable: true },
                 {
-                    field: 'inicio', title: 'Inicio', sortable: true,
+                    field: 'tipo', title: 'Tipo', sortable: true,
                     formatter: function (value) {
-                        return luxon.DateTime.fromMillis(Number(value)).toFormat('HH:mm');
-                    }
-                },
-                {
-                    field: 'fin', title: 'Fin', sortable: true,
-                    formatter: function (value) {
-                        return luxon.DateTime.fromMillis(Number(value)).toFormat('HH:mm');
+                        const labels = { fijo: 'Fijo', rotativo: 'Rotativo', libre: 'Libre' };
+                        return labels[value] || value;
                     }
                 },
                 {
@@ -246,9 +484,7 @@
                     formatter: function (value, row) {
                         return `
                             <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-outline-primary btn-editar"
-                                    data-id="${row.id}" data-titulo="${row.titulo}"
-                                    data-inicio="${row.inicio}" data-fin="${row.fin}" title="Editar">
+                                <button class="btn btn-sm btn-outline-primary btn-editar" data-id="${row.id}" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button class="btn btn-sm btn-outline-danger btn-eliminar"
@@ -265,12 +501,11 @@
         });
 
         $(document).on('click', '.btn-editar', function () {
-            abrirModalEditar(
-                $(this).data('id'),
-                $(this).data('titulo'),
-                Number($(this).data('inicio')),
-                Number($(this).data('fin'))
-            );
+            const id = $(this).data('id');
+            fetch(`/turnos/data/${id}`)
+                .then(res => res.json())
+                .then(turno => abrirModalEditar(turno))
+                .catch(() => mostrarErrorModal("Error al cargar el turno."));
         });
 
         $(document).on('click', '.btn-eliminar', function () {

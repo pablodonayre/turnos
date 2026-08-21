@@ -88,3 +88,25 @@
     height: 80vh;
     border: none;
 }
+
+.dia-toggle { 
+    min-width: 44px; 
+}
+.grupo-fijo { 
+    border: 1px solid #dee2e6;
+    border-radius: .5rem;
+    padding: .75rem;
+    margin-bottom: .75rem; 
+}
+.fila-rotativo, .fila-libre { 
+    display: flex; 
+    align-items: center; 
+    gap: .5rem;
+    margin-bottom: .5rem; 
+}
+.fila-libre .dia-num { 
+    min-width: 28px; 
+}
+.fila-libre .dia-nombre { 
+    min-width: 90px; 
+}
