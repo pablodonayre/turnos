@@ -49,16 +49,18 @@ const detalleDelResultado = [
     "SISTEMA_BLOQUEADO",
     "UID_YA_EXISTE",
     "UID_NUEVO",
+    "TARJETA_DAÑADA/INVALIDA",
+    "NO_COINCIDE_CON_SERVIDOR"
 ]
 
 const accionArray = ["ENTRADA", "SALIDA", "REGISTRO"];
 
-router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
+router.post('/', trimRequest.body, validateToken, async (req, res) => {
     const db_single = req.app.get('db_single');
     try {
 
         // const {user_id} = req.token_data;
-        const { uid, accion, timestamp, dispositivo, test } = req.body;
+        const { uid, accion, timestamp, test } = req.body;
         console.log(req.body)
 
         const response = {
@@ -79,6 +81,11 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
         /* VALIDANDO UID */
         if(!uid || uid == ""){
             return res.status(400).json({"status":"error","message":"UID ausente o inválido"});
+        }
+        
+        if(uid == "00 00 00 00"){
+            response.detalleDelResultado = detalleDelResultado[6];
+            return res.json(response);
         }
 
         /* VALIDANDO LA ACCION */
@@ -105,13 +112,15 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
         response.usuario = user.nombre + " " + user.apellido;
 
         /* VALIDANDO QUE NO SEA UN REGISTRO DUPLICADO */
-        const duplicadoRow = await db_single(`SELECT * FROM log WHERE dispositivo = ? AND uid = ? AND accion = ? AND timestamp = ?`, [dispositivo, uid, accion, timestamp]);
+        const duplicadoRow = await db_single(`SELECT * FROM log WHERE dispositivo = ? AND uid = ? AND accion = ? AND timestamp = ?`, [req.token_data.device_id, uid, accion, timestamp]);
 
         if(duplicadoRow.length > 0){
             response.duplicado = true;
 
             return res.json(response);
         }
+
+        const current_time = DateTime.now().setZone('America/Lima').ts;
 
         if(accion == "ENTRADA" || accion == "SALIDA"){
 
@@ -121,7 +130,7 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
             const nuevoEstado = (!currentStatus || currentStatus.estado == 0) ? 1 : 0;
             const tipoLog = nuevoEstado;
     
-            const ahora = DateTime.now();
+            const ahora = DateTime.fromSeconds(timestamp); // DateTime.now(); // debe ser el tiempo en el que se recibió la consulta
             const ahora_min = ahora.hour * 60 + ahora.minute;
     
     
@@ -133,8 +142,9 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
             //         ahora.minute * 60000 +
             //         ahora.second * 1000 +
             //         ahora.millisecond;
-    
-            if (nuevoEstado == 0 && currentStatus) {
+            
+            console.log("ACCION", nuevoEstado, currentStatus.estado, accion)
+            if (nuevoEstado == 0 && currentStatus.estado == 1 && accion == "SALIDA") {
                 // SALIDA
                 /**
                  * falta buscar el mensaje de inicio de turno para formar el mensaje en el calendario
@@ -189,11 +199,11 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
     
                 if (diffMin > 0) {
                     alerta = 1;
-                    alertaMsg = `Saliste tarde por ${diffMin} min`;
+                    alertaMsg = `Saliste tarde por ${ formatoTiempo(diffMin) }`;
                     // alertaMsg = `Saliste tarde por ${formatearTiempo(diffMin)}`;
                 } else if (diffMin < 0) {
                     alerta = 0;
-                    alertaMsg = `Saliste temprano por ${Math.abs(diffMin)} min`;
+                    alertaMsg = `Saliste temprano por ${ formatoTiempo(Math.abs(diffMin))}`;
                     // alertaMsg = `Saliste temprano por ${formatearTiempo(Math.abs(diffMin))}`;
                 } else {
                     alerta = 0;
@@ -223,7 +233,7 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
                     }
                 }
         
-            } else {
+            } else if(accion == "ENTRADA" && currentStatus.estado == 0) {
                 // INGRESO
                 
                 //     const target = DateTime.fromMillis(Number(user.ingreso));
@@ -259,16 +269,22 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
     
                 if (diffMin > 0) {
                     alerta = 1;
-                    alertaMsg = `Llegaste tarde por ${diffMin} min`;
+                    alertaMsg = `Llegaste tarde por ${ formatoTiempo(diffMin) }`;
                 } else if (diffMin < 0) {
                     alerta = 0;
-                    alertaMsg = `Llegaste temprano por ${Math.abs(diffMin)} min`;
+                    alertaMsg = `Llegaste temprano por ${ formatoTiempo(Math.abs(diffMin)) }`;
                 } else {
                     alerta = 0;
                     alertaMsg = 'Llegaste a tiempo';
                 }
     
                 console.log('diffMin', diffMin, alertaMsg);
+            } else {
+                response.habilitado = false;
+                response.detalleDelResultado = detalleDelResultado[7];
+                response.usuario = detalleDelResultado[7];
+                
+                return res.json(response);
             }
     
             //return;
@@ -278,11 +294,14 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
                 response.detalleDelResultado = detalleDelResultado[2];
                 response.usuario = "Desconocido";
                 response.modo = "TEST";
+
+                return res.json(response);
+
             } else {
-                console.log('d', [user.id, tipoLog, ahora.ts, ahora.ts, alerta, alertaMsg, "", "", "", dispositivo, uid, accion, timestamp])
+                // console.log('d', [user.id, tipoLog, ahora.ts, ahora.ts, alerta, alertaMsg, "", "", "", dispositivo, uid, accion, timestamp])
                 await db_single(
                     `INSERT INTO log (usuario_id, tipo, fecha_hora, creado_fecha, alerta, alerta_msg, comentario, archivo_server, archivo_usuario, dispositivo, uid, accion, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [user.id, tipoLog, ahora.ts, ahora.ts, alerta, alertaMsg, "", "", "", dispositivo, uid, accion, timestamp]
+                    [user.id, tipoLog, ahora.ts, current_time, alerta, alertaMsg, "", "", "", req.token_data.device_id, uid, accion, timestamp]
                 );
         
                 if (currentStatus) {
@@ -300,10 +319,12 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
             response.detalleDelResultado = detalleDelResultado[5];
             response.usuario = "NUEVO UID";
             response.modo = "REGISTRO";
+            
+            return res.json(response);
         }
 
 
-        return res.json(response)
+        return res.json(response);
 
         // return res.json({
         //     "habilitado": habilitado,
@@ -326,5 +347,12 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
     }
 });
 
+
+function formatoTiempo(minutos){
+    const horas = Math.floor(minutos / 60);
+    const mins = minutos % 60;
+
+    return `${String(horas).padStart(2, '0')} H: ${String(mins).padStart(2, '0')} M`;
+}
 
 module.exports = router;

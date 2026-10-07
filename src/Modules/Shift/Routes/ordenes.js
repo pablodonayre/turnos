@@ -1,12 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const checkNotAuthenticated = require('../../Auth/Middleware/checkNotAuthenticated');
-const { marcarSchema } = require('../../../Validations/shift');
 const trimRequest = require('../../../Library/Helpers/trim-request');
 const validateToken = require('../../Core/Middleware/validateToken');
 const jwt = require('jsonwebtoken');
-const { crearEvents } = require('../../../Library/calendar');
-const checkAuthenticated = require('../../Core/Middleware/checkAuthenticated');
 const { DateTime } = require('luxon');
 
 /* opciones de modo
@@ -53,26 +49,32 @@ const detalleDelResultado = [
 
 const accionArray = ["ENTRADA", "SALIDA", "REGISTRO"];
 
-router.get('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
+router.get('/', trimRequest.body, validateToken, async (req, res) => {
     const db_single = req.app.get('db_single');
     try {
 
         console.log('ordenes')
 
-        // const rows = await db_single(`SELECT * 
-        //     FROM dispositivos WHERE nombre = ${ req.query.nombre }`
-        // );
+        const device = await db_single(`SELECT * FROM dispositivos WHERE id = ${ req.token_data.device_id }`);
 
-        const response = {
-            "solicitar_estado": true, // sale de la info del dispositivo, todavía pendiente
-            "cambiar_modo": true, // sale de la info del dispositivo, todavía pendiente
-            "modo": "REGISTRO", // rows[0].modo
-            "test_interval_ms": 10000,
+        if(device && device.length > 0){
+            const response = {
+                "solicitar_estado": device[0].solicitar_estado == 0 ? false : true,
+                "cambiar_modo": device[0].cambiar_modo == 0 ? false : true,
+                "modo": device[0].modo,
+                "test_interval_ms": device[0].test_interval_ms,
+            }
+            
+            return res.status(200).json(response);
+        } else {
+            // valores por defecto
+            return res.status(400).json({
+                "solicitar_estado": false,
+                "cambiar_modo": false,
+                "modo": null,
+                "test_interval_ms": 60000,
+            })
         }
-
-        return res.status(200).json(response);
-
-        
 
     } catch (e) {
         console.error('ERROR EN MARCAR', e);

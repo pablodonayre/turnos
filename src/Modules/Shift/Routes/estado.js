@@ -53,25 +53,36 @@ const detalleDelResultado = [
 
 const accionArray = ["ENTRADA", "SALIDA", "REGISTRO"];
 
-router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
+router.post('/', trimRequest.body, validateToken, async (req, res) => {
     const db_single = req.app.get('db_single');
     try {
 
         console.log('estado')
 
+        const { modo_actual } = req.body;
 
-        // const {user_id} = req.token_data;
-        const { dispositivo, modo_actual, firmware_version } = req.body;
-        console.log(req.body)
+        const device = await db_single(`SELECT * 
+            FROM dispositivos WHERE id = ${ req.token_data.device_id }`
+        );
 
-        // const rows = await db_single(`SELECT * 
-        //     FROM dispositivos WHERE nombre = ${ req.query.nombre }`
-        // );
+        console.log('modo db', device[0].modo)
+        console.log('modo recibido', modo_actual)
+
+        // si la DB no coincide con el equipo sigue enviando como orden pendiente
+        let orden_pendiente = null;
+
+        if(device && device.length > 0){
+            if(device[0].modo != modo_actual){
+                orden_pendiente = true;
+            } else {
+                await db_single(`UPDATE dispositivos SET cambiar_modo = 0 WHERE id = ${ req.token_data.device_id }`);
+            }
+        }
 
         const response = {
-            "ok": true, // sale de la info del dispositivo, todavía pendiente
-            "modo_recibido": modo_actual, // sale de la info del dispositivo, todavía pendiente
-            "orden_pendiente": null,
+            "ok": true, // confirmación de recepción
+            "modo_recibido": modo_actual,
+            "orden_pendiente": orden_pendiente,
         }
 
 

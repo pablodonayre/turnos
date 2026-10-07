@@ -72,7 +72,7 @@
                         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="modal">
                             Cancelar &nbsp;<i class="fas fa-undo"></i>
                         </button>
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <button id="borrarBtn" type="submit" class="btn btn-sm btn-outline-danger">
                             Eliminar &nbsp;<i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -174,12 +174,15 @@
         })
         .then(res => res.json())
         .then(dataResponse => {
-            if (dataResponse.ok && dataResponse.msg === 'sin cambios') {
-                mostrarErrorModal('No hiciste ningún cambio.', 'warning');
-            } else if (dataResponse.ok) {
+            console.log('data', dataResponse)
+            console.log('flash', dataResponse.flash)
+            if (dataResponse.flash == "success") {
                 modalDispositivo.hide();
                 $('#table').bootstrapTable('refresh');
                 dispositivoAEditarId = null;
+                showAlerts(successAlert, successMessage, dataResponse.msg);
+            } else if (dataResponse.ok && dataResponse.msg === 'sin cambios') {
+                mostrarErrorModal('No hiciste ningún cambio.', 'warning');
             } else {
                 mostrarErrorModal(dataResponse.msg);
             }
@@ -219,6 +222,9 @@
                             </div>`;
                         return `
                             <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-success btn-jwt" data-id="${row.id}" title="Obtener JWT">
+                                    <i class="fas fa-key"></i>
+                                </button>
                                 <button class="btn btn-sm btn-outline-primary btn-editar" data-id="${row.id}" data-row="` + JSON.stringify(row).replace(/"/g, '&quot;')+ `" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -237,10 +243,31 @@
             abrirModalEditar(row)
         });
 
+        $(document).on('click', '.btn-jwt', function(){
+            const id = $(this).data('id');
+
+            fetch(`/dispositivos/jwt/${id}`, { method: 'GET' })
+                .then(res => res.json())
+                .then(dataResponse => {
+
+                    $('#modalEliminar .modal-title').html('JWT');
+                    $('#borrarBtn').hide();
+                        document.getElementById('modalMessage').innerHTML =
+                        `JWT = <textarea class="form-control" rows="5">${ dataResponse.jwt }</textarea>`;
+                        myModal.show();
+                })
+                .catch(() => {
+                    myModal.hide();
+                    showAlerts(dangerAlert, dangerMessage, "Error al obtener JWT.");
+                });
+        })
+
         $(document).on('click', '.btn-eliminar', function () {
             dispositivoAEliminarId = $(this).data('id');
-            document.getElementById('modalMessage').innerHTML =
-                `¿Está seguro que desea eliminar el dispositivo <strong>${$(this).data('titulo')}</strong>?`;
+
+            $('#borrarBtn').show();
+            $('#modalEliminar .modal-title').html('Confirmar acción');
+            document.getElementById('modalMessage').innerHTML = `¿Está seguro que desea eliminar el dispositivo <strong>${$(this).data('titulo')}</strong>?`;
             myModal.show();
         });
 

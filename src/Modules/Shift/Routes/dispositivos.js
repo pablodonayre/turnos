@@ -145,11 +145,17 @@ router.post('/data', trimRequest.body, checkAuthenticated/*, checkAdmin*/, async
 
         const ahora = DateTime.now().ts;
 
+        /**
+         * Cuando es un dispositivo recien creado
+         *  solicitar_estado = true | 1
+         *  cambiar_modo = false | 0
+         */
+
         await db_single(
             `INSERT INTO dispositivos
-            (nombre, modo, test_interval_ms, creado_fecha)
-            VALUES (?, ?, ?, ?)`,
-            [nombre, modo, test_interval_ms, ahora]
+            (nombre, modo, test_interval_ms, solicitar_estado, cambiar_modo, creado_fecha)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [nombre, modo, test_interval_ms, 1, 0, ahora]
         );
 
         return res.json({ flash: 'success', msg: 'Dispositivo creado correctamente.' });
@@ -162,7 +168,8 @@ router.post('/data', trimRequest.body, checkAuthenticated/*, checkAdmin*/, async
 // PUT /dispositivos/data
 router.put('/data/:id', trimRequest.body, checkAuthenticated/*, checkAdmin*/, async (req, res) => {
     const db_single = req.app.get('db_single');
-    const { data } = req.body;
+    console.log(req.body)
+    const data = req.body;
 
     try {
         let sql = 'UPDATE dispositivos SET ';
@@ -174,7 +181,9 @@ router.put('/data/:id', trimRequest.body, checkAuthenticated/*, checkAdmin*/, as
         }
         if (data.modo != undefined) {
             sql += values.length > 0 ? ', modo = ?' : 'modo = ?';
+            sql += values.length > 0 ? ', cambiar_modo = ?' : 'cambiar_modo = ?';
             values.push(data.modo === '' ? 0 : data.modo);
+            values.push(1); // cambiar_modo pasa a true
         }
         if (data.test_interval_ms != undefined) {
             sql += values.length > 0 ? ', test_interval_ms = ?' : 'test_interval_ms = ?';
@@ -227,5 +236,23 @@ router.post('/', trimRequest.body, /*validateToken,*/ async (req, res) => {
     }
 });
 
+
+// GET /dispositivos/jwt
+router.get('/jwt/:id', checkAuthenticatedApi, async (req, res) => {
+    try {
+        let payload = {
+            device_id: req.params.id
+        };
+
+        const token = jwt.sign(payload, process.env.JWT_PRIVATE_KEY)
+
+        return res.json({
+            jwt: token
+        });
+    } catch (err) {
+        console.error('ERROR DATA DISPOSITIVOS', err);
+        return res.status(500).json({ flash: 'danger', msg: 'Error al obtener JWT.' });
+    }
+});
 
 module.exports = router;

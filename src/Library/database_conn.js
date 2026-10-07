@@ -13,22 +13,27 @@ const USERNAME = process.env.MYSQL_USER_1;
 const PASSWORD = process.env.MYSQL_PASSWORD;
 const DATABASE = process.env.MYSQL_DATABASE;
 
+
 async function mySqlSingleConnection(sql, bind) {
 
     /**
      * Single MySQL connection.
      * Creates the connection, makes the query and close it to avoid concurrency conflicts.
      */
-
+    let connection;
     try {
 
         console.log('Opening connection...')
-        var connection = mysql.createConnection({
+        connection = mysql.createConnection({
             host: HOST,
             port: PORT,
             user: USERNAME,
             password: PASSWORD,
             database: DATABASE
+        });
+
+        connection.on('error', (error) => {
+            console.error('MySQL connection error:', error);
         });
 
         const query = util.promisify(connection.query).bind(connection);
@@ -50,8 +55,19 @@ async function mySqlSingleConnection(sql, bind) {
         console.log(error);
         throw new Error(error);
     } finally {
-        console.log('Closing connection...');
-        connection.end();
+        
+        if(connection){
+            console.log('Closing connection...');
+            connection.end((error) => {
+
+                if (error) {
+                    console.error('MySQL close error:', error);
+                } else {
+                    console.log('Connection closed');
+                }
+
+            });
+        }
     }
 
 

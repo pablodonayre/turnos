@@ -12,7 +12,7 @@
                     <span class="d-none d-sm-inline-block">Guardar &nbsp;</span>
                     <i class="fas fa-save"></i>
                 </button>
-                <a class="btn btn-outline-danger d-flex align-items-center justify-content-center shadow-sm" href="/usuario">
+                <a class="btn btn-outline-danger d-flex align-items-center justify-content-center shadow-sm" href="/usuarios/lista">
                     <span class="d-none d-sm-inline-block">Cancelar &nbsp;</span>
                     <i class="fas fa-undo"></i>
                 </a>
@@ -106,7 +106,7 @@
                 <span class="d-none d-sm-inline-block">Guardar &nbsp;</span>
                 <i class="fas fa-save"></i>
             </button>
-            <a class="btn btn-outline-danger d-flex align-items-center justify-content-center shadow-sm" href="/usuario">
+            <a class="btn btn-outline-danger d-flex align-items-center justify-content-center shadow-sm" href="/usuarios/lista">
                 <span class="d-none d-sm-inline-block">Cancelar &nbsp;</span>
                 <i class="fas fa-undo"></i>
             </a>
@@ -195,11 +195,12 @@
             fecha_nacimiento: $('#fecha_nacimiento').val() ? luxon.DateTime.fromISO($('#fecha_nacimiento').val()).toUTC().ts : 0,
             fecha_ingreso: $('#fecha_ingreso').val() ? luxon.DateTime.fromISO($('#fecha_ingreso').val()).toUTC().ts : 0,
             id_calendario: $('#id_calendario').val(),
+            uid: $('#uid').val(),
             ingreso: timeToMs($('#ingreso').val()),
             salida: timeToMs($('#salida').val())
         };
 
-        fetch("/usuario/guardar", {
+        fetch("/usuarios/nuevo", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ data })
@@ -209,7 +210,7 @@
             if (dataResponse.flash == "danger") {
                 showAlerts(dangerAlert, dangerMessage, dataResponse.msg);
             } else {
-                location.href = "/usuario";
+                location.href = "/usuarios/lista";
             }
         });
     }

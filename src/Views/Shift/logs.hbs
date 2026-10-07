@@ -243,7 +243,13 @@
             queryParams: queryParams,
             searchSelector: '#inputBuscar',
             responseHandler: responseHandler,
-            columns: [
+            columns: [{
+                    field: 'creado_fecha', title: 'Creado', sortable: true,
+                    formatter: function (value) {
+                        if (!value) return '-';
+                        return luxon.DateTime.fromMillis(Number(value)).toFormat('dd-MMM-yyyy, HH:mm:ss');
+                    }
+                },
                 {
                     field: 'tipo', title: 'Tipo', sortable: true,
                     formatter: function (value) {

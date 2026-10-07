@@ -15,7 +15,7 @@
                 </button>
             </div>
             {{#if is_admin}}
-            <a class="btn btn-outline-primary shadow-sm" href="/usuario/nuevo">
+            <a class="btn btn-outline-primary shadow-sm" href="/usuarios/nuevo">
                 <span class="d-none d-sm-inline-block">Añadir usuario &nbsp;</span>
                 <i class="fas fa-plus"></i>
             </a>
@@ -100,7 +100,7 @@
 
                         return `
                             <div class="btn-group" role="group">
-                                <a class="btn btn-sm btn-outline-primary" href="/usuario/editar/${row.id}" title="Editar">
+                                <a class="btn btn-sm btn-outline-primary" href="/usuarios/editar/${row.id}" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 ${botonEstatus}

@@ -6,21 +6,82 @@ const { usuarioSchema } = require('../../../Validations/usuario');
 const checkAuthenticated = require('../../Core/Middleware/checkAuthenticated');
 const checkAuthenticatedApi = require('../../Core/Middleware/checkAuthenticatedApi');
 const checkAdmin = require('../../Core/Middleware/checkAdmin');
+const validateToken = require('../../Core/Middleware/validateToken');
 
 
-// GET /usuario
-router.get('/', checkAuthenticated, (req, res) => {
+
+// ruta de la app
+// const VERSION_USUARIOS = 1;
+router.get('/', validateToken, async (req, res) => {
+    console.log('usuarios')
+    const db_single = req.app.get('db_single');
+    try {
+
+        // version recibida en la consulta
+        const version_dispositivo = Number.parseInt(req.query.version, 10) || 0;
+        console.log('v ', version_dispositivo)
+
+        // version de la db
+        const version_db = await db_single(`SELECT version FROM config`);
+        const version_actual = version_db[0].version;
+
+        // validando las versiones
+        if(version_dispositivo === version_actual){
+            return res.status(200).json({
+                status: 'up_to_date',
+                version: version_actual,
+                crc32: 0 // no es necesario mandar el ultimo calculo
+            })
+        }
+
+        // se requiere actualizar
+        const query = `SELECT uid, CONCAT(nombre,' ', apellido) AS nombre, 
+            CASE
+                WHEN estatus = 1 THEN true
+                ELSE false
+            END AS habilitado
+        FROM usuarios`;
+
+        const usuarios = await db_single(query);
+
+        // generando el checksum
+        const crc32 = calcularCrc32Usuarios(usuarios);
+
+        console.log({
+            status: 'update',
+            version: version_actual,
+            crc32: crc32,
+            usuarios: usuarios
+        })
+
+
+        return res.status(200).json({
+            status: 'update',
+            version: version_actual,
+            crc32: crc32,
+            usuarios: usuarios
+        })
+
+
+        // return res.status(200).json(usuarios);
+    } catch (error) {
+        return res.status(500).json({ flash: 'danger', msg: 'Error al cargar usuarios.' });
+    }
+});
+
+// GET /usuarios
+router.get('/lista', checkAuthenticated, (req, res) => {
     res.render('Usuarios/list', {
         user: req.session.user,
         is_admin: req.session.user.rol === 'ADMIN',
         title: 'Usuarios',
         use_spaces: process.env.USE_SPACES,
-        url_deactivate: '/usuario/eliminar',
-        url_data: '/usuario/data'
+        url_deactivate: '/usuarios/eliminar',
+        url_data: '/usuarios/data'
     });
 });
 
-// GET /usuario/data
+// GET /usuarios/data
 router.get('/data', checkAuthenticatedApi, async (req, res) => {
     const db_single = req.app.get('db_single');
     try {
@@ -77,7 +138,7 @@ router.get('/data', checkAuthenticatedApi, async (req, res) => {
     }
 });
 
-// GET /usuario/nuevo
+// GET /usuarios/nuevo
 router.get('/nuevo', checkAuthenticated, checkAdmin, (req, res) => {
     const danger = req.flash('danger')[0];
     const message = req.flash('success')[0];
@@ -88,23 +149,28 @@ router.get('/nuevo', checkAuthenticated, checkAdmin, (req, res) => {
         user: req.session.user,
         title: 'Nuevo usuario',
         use_spaces: process.env.USE_SPACES,
-        action: '/usuario/nuevo'
+        action: '/usuarios/nuevo'
     });
 });
 
-// POST /usuario/nuevo
+// POST /usuarios/nuevo
 router.post('/nuevo', trimRequest.body, checkAuthenticated, checkAdmin, async (req, res) => {
-    const db_single = req.app.get('db_single');
+    const db_pool = req.app.get('db_pool');
+    const conn = await db_pool.connection(); 
+
     try {
         const { error, value } = usuarioSchema.validate(req.body.data);
         if (error) {
             return res.json({ flash: 'danger', msg: error.details[0].message });
         }
 
+        await conn.query('START TRANSACTION;');
+        await conn.query('SET autocommit = 0;');
+
         const { nombre, apellido, correo, password, rol, estatus, sueldo, celular,
                 fecha_nacimiento, fecha_ingreso, id_calendario, ingreso, salida, uid } = value;
 
-        const existe = await db_single('SELECT id FROM usuarios WHERE correo = ? LIMIT 1', [correo]);
+        const existe = await conn.query('SELECT id FROM usuarios WHERE correo = ? LIMIT 1', [correo]);
         if (existe.length > 0) {
             return res.json({ flash: 'danger', msg: 'Ya existe un usuario con ese correo.' });
         }
@@ -113,14 +179,20 @@ router.post('/nuevo', trimRequest.body, checkAuthenticated, checkAdmin, async (r
         const ahora = Date.now();
         const estatusVal = estatus === 'Activo' ? 1 : 0;
 
-        await db_single(
+        await conn.query(
             `INSERT INTO usuarios
             (nombre, apellido, correo, password, rol, estatus, sueldo, celular, fecha_nacimiento, fecha_ingreso, id_calendario, ingreso, salida, creado_fecha, creado_por, token, uid)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [nombre, apellido, correo, hash, rol, estatusVal, sueldo, celular,
             fecha_nacimiento, fecha_ingreso, id_calendario,
             ingreso, salida, ahora, req.session.user.user_id, '', uid]
         );
+
+        // como hubo cambios en la tabla de usuarios, se tiene que incrementar la version 
+        await conn.query(`UPDATE config SET version = version + 1`);
+
+        await conn.query('COMMIT;');
+
 
         return res.json({ flash: 'success', msg: 'Usuario creado correctamente.' });
     } catch (err) {
@@ -129,7 +201,7 @@ router.post('/nuevo', trimRequest.body, checkAuthenticated, checkAdmin, async (r
     }
 });
 
-// GET /usuario/editar/:id
+// GET /usuarios/editar/:id
 router.get('/editar/:id', checkAuthenticated, checkAdmin, async (req, res) => {
     const db_single = req.app.get('db_single');
     try {
@@ -141,8 +213,8 @@ router.get('/editar/:id', checkAuthenticated, checkAdmin, async (req, res) => {
             user: req.session.user,
             title: 'Editar usuario',
             use_spaces: process.env.USE_SPACES,
-            action_info: `/usuario/editar/${req.params.id}/info`,
-            action_calendario: `/usuario/editar/${req.params.id}/calendario`
+            action_info: `/usuarios/editar/${req.params.id}/info`,
+            action_calendario: `/usuarios/editar/${req.params.id}/calendario`
         });
     } catch (err) {
         console.error('ERROR EDITAR USUARIO', err);
@@ -150,7 +222,7 @@ router.get('/editar/:id', checkAuthenticated, checkAdmin, async (req, res) => {
     }
 });
 
-// GET /usuario/editar/:id/datos
+// GET /usuarios/editar/:id/datos
 router.get('/editar/:id/datos', checkAuthenticated, checkAdmin, async (req, res) => {
     const db_single = req.app.get('db_single');
     try {
@@ -164,9 +236,10 @@ router.get('/editar/:id/datos', checkAuthenticated, checkAdmin, async (req, res)
     }
 });
 
-// PUT /usuario/editar/:id/info
+// PUT /usuarios/editar/:id/info
 router.put('/editar/:id/info', trimRequest.body, checkAuthenticated, checkAdmin, async (req, res) => {
-    const db_single = req.app.get('db_single');
+    const db_pool = req.app.get('db_pool');
+    const conn = await db_pool.connection(); 
     const { data } = req.body;
 
     try {
@@ -226,7 +299,15 @@ router.put('/editar/:id/info', trimRequest.body, checkAuthenticated, checkAdmin,
         sql += ' WHERE id = ?';
         values.push(req.params.id);
 
-        await db_single(sql, values);
+        await conn.query('START TRANSACTION;');
+        await conn.query('SET autocommit = 0;');
+
+        await conn.query(sql, values);
+
+        // como hubo cambios en la tabla de usuarios, se tiene que incrementar la version 
+        await conn.query(`UPDATE config SET version = version + 1`);
+
+        await conn.query('COMMIT;');
 
         return res.json({ flash: 'success', msg: 'Información personal actualizada satisfactoriamente' });
     } catch (err) {
@@ -235,7 +316,7 @@ router.put('/editar/:id/info', trimRequest.body, checkAuthenticated, checkAdmin,
     }
 });
 
-// PUT /usuario/editar/:id/calendario
+// PUT /usuarios/editar/:id/calendario
 router.put('/editar/:id/calendario', trimRequest.body, checkAuthenticated, checkAdmin, async (req, res) => {
     const db_single = req.app.get('db_single');
     const { data } = req.body;
@@ -273,16 +354,77 @@ router.put('/editar/:id/calendario', trimRequest.body, checkAuthenticated, check
     }
 });
 
-// PUT /usuario/eliminar/:id 
+// PUT /usuarios/eliminar/:id 
 router.put('/eliminar/:id', checkAuthenticated, checkAdmin, async (req, res) => {
-    const db_single = req.app.get('db_single');
+    const db_pool = req.app.get('db_pool');
+    const conn = await db_pool.connection(); 
     try {
-        await db_single('UPDATE usuarios SET estatus = 0 WHERE id = ?', [req.params.id]);
+
+        await conn.query('START TRANSACTION;');
+        await conn.query('SET autocommit = 0;');
+
+        await conn.query('UPDATE usuarios SET estatus = 0 WHERE id = ?', [req.params.id]);
+
+        // como hubo cambios en la tabla de usuarios, se tiene que incrementar la version 
+        await conn.query(`UPDATE config SET version = version + 1`);
+
+        await conn.query('COMMIT;');
+
         return res.json({ flash: 'success', msg: 'Usuario desactivado.' });
     } catch (err) {
         console.error('ERROR ELIMINAR USUARIO', err);
         return res.status(500).json({ flash: 'danger', msg: 'Error interno del servidor.' });
     }
 });
+
+
+
+
+function limpiarCampoCsv(valor) {
+    return String(valor)
+        .replace(/,/g, ' ')
+        .replace(/\r/g, ' ')
+        .replace(/\n/g, ' ');
+}
+
+function construirCsvUsuarios(usuarios) {
+    const lineas = [
+        'uid,nombre,habilitado,reservado1,reservado2,reservado3'
+    ];
+
+    for (const usuario of usuarios) {
+        const uid = limpiarCampoCsv(usuario.uid);
+        const nombre = limpiarCampoCsv(usuario.nombre);
+        const habilitado = usuario.habilitado ? '1' : '0';
+
+        lineas.push(`${uid},${nombre},${habilitado},,,`);
+    }
+
+    // MUY IMPORTANTE:
+    // CRLF + salto de línea final, tiene que ser en ese orden específico!
+    return lineas.join('\r\n') + '\r\n';
+}
+
+function calcularCrc32(buffer) {
+    let crc = 0xFFFFFFFF;
+
+    for (let i = 0; i < buffer.length; i++) {
+        crc ^= buffer[i];
+
+        for (let j = 0; j < 8; j++) {
+            crc = (crc >>> 1) ^ ((crc & 1) ? 0xEDB88320 : 0);
+        }
+    }
+
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function calcularCrc32Usuarios(usuarios) {
+    const csv = construirCsvUsuarios(usuarios);
+
+    const bytes = Buffer.from(csv, 'utf8');
+
+    return calcularCrc32(bytes);
+}
 
 module.exports = router;
