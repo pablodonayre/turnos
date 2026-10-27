@@ -35,14 +35,23 @@ router.get('/', validateToken, async (req, res) => {
         }
 
         // se requiere actualizar
-        const query = `SELECT uid, CONCAT(nombre,' ', apellido) AS nombre, 
-            CASE
-                WHEN estatus = 1 THEN true
-                ELSE false
-            END AS habilitado
-        FROM usuarios`;
+        const query = `SELECT uid, CONCAT(nombre,' ', apellido) AS nombre, estatus FROM usuarios`;
+            // CASE
+            //     WHEN estatus = 1 THEN "true"
+            //     ELSE "false"
+            // END AS habilitado
+        
+
 
         const usuarios = await db_single(query);
+        const usuarios_array = [];
+        for(let i = 0; i < usuarios.length; i++){
+            usuarios_array.push({
+                uid: usuarios[i].uid,
+                nombre: usuarios[i].nombre,
+                habilitado: usuarios[i].estatus == 1 ? true : false,
+            })
+        }
 
         // generando el checksum
         const crc32 = calcularCrc32Usuarios(usuarios);
@@ -59,7 +68,7 @@ router.get('/', validateToken, async (req, res) => {
             status: 'update',
             version: version_actual,
             crc32: crc32,
-            usuarios: usuarios
+            usuarios: usuarios_array
         })
 
 
@@ -395,7 +404,8 @@ function construirCsvUsuarios(usuarios) {
     for (const usuario of usuarios) {
         const uid = limpiarCampoCsv(usuario.uid);
         const nombre = limpiarCampoCsv(usuario.nombre);
-        const habilitado = usuario.habilitado ? '1' : '0';
+        const habilitado = usuario.estatus;// usuario.habilitado ? '1' : '0';
+        console.log('h', habilitado)
 
         lineas.push(`${uid},${nombre},${habilitado},,,`);
     }

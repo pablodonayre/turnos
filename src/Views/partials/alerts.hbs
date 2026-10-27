@@ -1,12 +1,78 @@
+{{#if primary }}
+    <div class="alert alert-primary alert-dismissible fade show mb-1 rounded" role="alert">
+        {{ primary }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{{/if}}
+
+{{#if message }} <!-- success -->
+    <div class="alert alert-success alert-dismissible fade show mb-1 rounded" style="display: block;" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{{/if}}
+
+{{#if danger }}
+    <div class="alert alert-danger alert-dismissible fade show mb-1 rounded" style="display: block;" role="alert">
+        {{ danger }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{{/if}}
+
+{{#if warning }}
+    <div class="alert alert-warning alert-dismissible fade show mb-1 rounded" style="display: block;" role="alert">
+        {{ warning }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+
+    </div>
+{{/if}}
+
+{{#if info }}
+    <div class="alert alert-info alert-dismissible fade show mb-1 rounded" style="display: block;" role="alert">
+        {{ info }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+
+    </div>
+{{/if}}
+
+
 <div id="dangerAlert">
-    <div class="alert alert-danger alert-dismissible fade show" style="display: none;" role="alert">
+    <div class="alert alert-danger alert-dismissible fade show mb-1 rounded" data-id="timeDanger" style="display: none;" role="alert">
         <span id="dangerMessage"></span>
         <button type="button" class="btn-close" onclick="closeAlert(dangerAlert)" aria-label="Close"></button>
     </div>
 </div>
+
 <div id="successAlert">
-    <div class="alert alert-success alert-dismissible fade show" style="display: none;" role="alert">
+    <div class="alert alert-success alert-dismissible fade show mb-1 rounded" data-id="timeSuccess" style="display: none;" role="alert">
         <span id="successMessage"></span>
         <button type="button" class="btn-close" onclick="closeAlert(successAlert)" aria-label="Close"></button>
+    </div>
+</div>
+
+<div id="warningAlert">
+    <div class="alert alert-warning alert-dismissible fade show mb-1 rounded" data-id="timeWarning" style="display: none;" role="alert">
+        <span id="warningMessage"></span>
+        <button type="button" class="btn-close" onclick="closeAlert(warningAlert)" aria-label="Close"></button>
+    </div>
+</div>
+
+{{!-- alertas sin X --}}
+
+<div id="dangerAlertNC">
+    <div class="alert alert-danger fade show mb-1 rounded" style="display: none;" role="alert">
+        <span id="dangerMessageNC"></span>
+    </div>
+</div>
+
+<div id="successAlertNC">
+    <div class="alert alert-success fade show mb-1 rounded" style="display: none;" role="alert">
+        <span id="successMessageNC"></span>
+    </div>
+</div>
+
+<div id="warningAlertNC">
+    <div class="alert alert-warning fade show mb-1 rounded" style="display: none;" role="alert">
+        <span id="warningMessageNC"></span>
     </div>
 </div>

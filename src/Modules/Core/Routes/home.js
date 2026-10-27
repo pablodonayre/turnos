@@ -4,9 +4,11 @@ const router = express.Router();
 
 
 router.get('/', checkAuthenticated, (req, res) => {
+    const danger = req.flash('danger')[0];
     const message = req.flash('success')[0];
 
     res.render('Core/home', {
+        danger: danger,
         message: message,
         user: req.session.user,
         is_admin: req.session.user.rol === 'ADMIN',

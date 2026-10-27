@@ -8,6 +8,8 @@
                 <div class="alert alert-success text-center">{{message}}</div>
             {{/if}}
 
+            {{> alerts}}
+
             <div class="card shadow-sm border-0 rounded-4 text-center p-4">
                 <h2 class="mb-3">
                     Bienvenido{{#if user.nombre}}, {{user.nombre}}{{/if}}

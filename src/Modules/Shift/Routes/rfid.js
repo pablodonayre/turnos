@@ -6,8 +6,11 @@ const trimRequest = require('../../../Library/Helpers/trim-request');
 const validateToken = require('../../Core/Middleware/validateToken');
 const jwt = require('jsonwebtoken');
 const { crearEvents } = require('../../../Library/calendar');
-const checkAuthenticated = require('../../Core/Middleware/checkAuthenticated');
 const { DateTime } = require('luxon');
+const checkDeviceApi = require('../../Core/Middleware/checkDeviceApi');
+const fs = require('fs');
+const path = require('path');
+const checkAuthenticatedApi = require('../../Core/Middleware/checkAuthenticatedApi');
 
 /* opciones de modo
     ASISTENCIA	Lectura de asistencia; ENTRADA/SALIDA.
@@ -110,6 +113,7 @@ router.post('/', trimRequest.body, validateToken, async (req, res) => {
             //return res.status(403).json({ "flash": "danger", "msg": "Usuario inactivo."});
         }
         response.usuario = user.nombre + " " + user.apellido;
+        response.habilitado = true;// user.estatus == 1 ? true : false;
 
         /* VALIDANDO QUE NO SEA UN REGISTRO DUPLICADO */
         const duplicadoRow = await db_single(`SELECT * FROM log WHERE dispositivo = ? AND uid = ? AND accion = ? AND timestamp = ?`, [req.token_data.device_id, uid, accion, timestamp]);
@@ -340,6 +344,212 @@ router.post('/', trimRequest.body, validateToken, async (req, res) => {
         //     "alerta_msg": alertaMsg,
         //     "fecha": ahora.setLocale('es').toFormat("cccc dd 'de' LLLL yyyy, HH:mm")
         // });
+
+    } catch (e) {
+        console.error('ERROR EN MARCAR', e);
+        return res.status(500).json({ "flash": "danger", "msg": "Error interno del servidor." });
+    }
+});
+
+router.post('/device', trimRequest.body, [checkAuthenticatedApi/*, checkDeviceApi*/], async (req, res) => {
+    const db_single = req.app.get('db_single');
+    try {
+
+        // const { uid, accion, timestamp, test } = req.body;
+        const { accion, ubicacion, descripcion, archivo_server, archivo_usuario } = req.body;
+        const timestamp = DateTime.now().setZone('America/Lima').toSeconds();
+
+        console.log(req.body)
+
+        const response = {
+            "habilitado": true, // sale de la info del dispositivo, todavía pendiente
+            "detalleDelResultado": detalleDelResultado[0], // sale de la info del dispositivo, todavía pendiente
+            "usuario": "",
+            "modo": "ASISTENCIA", // sale de la info del dispositivo, todavía pendiente
+            "duplicado": false, // Clave duplicada: dispositivo+uid+accion+timestamp.
+            "flash": "danger"
+        }
+
+        /* VALIDANDO Content-Type no JSON */
+        if (!req.is('json')) {
+            return res.status(400).json({"status":"error","message":"Se esperaba Content-Type application/json"});
+        }
+
+        /* VALIDANDO LA ACCION */
+        if(!accionArray.includes(accion)){
+            return res.status(400).json({"status":"error","message":"La acción debe ser ENTRADA, SALIDA o REGISTRO"});
+        }
+
+        /* BUSCANDO Y VALIDANDO AL USUARIO */
+        const rows = await db_single(`SELECT * FROM usuarios WHERE id = ? LIMIT 1`, [req.session.user.user_id]);
+        const user = rows[0];
+        console.log('user', user)
+        
+        if (!user) {
+            response.detalleDelResultado = detalleDelResultado[2];
+            return res.json(response);
+            //return res.status(404).json({ "flash": "danger", "msg": "Usuario no encontrado."});
+        }
+        if (user.estatus == 0) {
+            response.detalleDelResultado = detalleDelResultado[2];
+            return res.json(response);
+            //return res.status(403).json({ "flash": "danger", "msg": "Usuario inactivo."});
+        }
+        response.usuario = user.nombre + " " + user.apellido;
+
+        /* BUSCANDO EL ID DEL DISPOSITIVO REMOTO */
+        const disp_remoto = await db_single(`SELECT id FROM dispositivos WHERE nombre LIKE "%remoto%"`);
+        console.log('remot', disp_remoto)
+
+
+        /* VALIDANDO QUE NO SEA UN REGISTRO DUPLICADO */
+        const duplicadoRow = await db_single(`SELECT * FROM log WHERE dispositivo = ? AND uid = ? AND accion = ? AND timestamp = ?`, [disp_remoto[0]?.id || 0, user.uid, accion, timestamp]);
+
+        if(duplicadoRow.length > 0){
+            response.duplicado = true;
+
+            return res.json(response);
+        }
+
+        const current_time = DateTime.now().setZone('America/Lima').ts;
+
+        /* MOVIENDO LA IMAGEN SI EXISTE */
+        if(archivo_server && archivo_server != ''){
+            const tempPath = path.join(__dirname, '..', '..', '..', 'public', 'img', 'temp', archivo_server);
+            const permPath = path.join(__dirname, '..', '..', '..', 'public', 'img', 'perm', archivo_server);
+
+            if (fs.existsSync(tempPath)) {
+                fs.renameSync(tempPath, permPath);
+            } else if (!fs.existsSync(permPath)) {
+                return res.status(400).json({ flash: 'danger', msg: 'El archivo no se encontró en el servidor.' });
+            }
+        }
+
+        if(accion == "ENTRADA" || accion == "SALIDA"){
+
+            const statusRows = await db_single(`SELECT * FROM user_status WHERE usuario_id = ? LIMIT 1`, [user.id]);
+            
+            const currentStatus = statusRows[0];
+            const nuevoEstado = (!currentStatus || currentStatus.estado == 0) ? 1 : 0;
+            const tipoLog = nuevoEstado;
+    
+            const ahora = DateTime.fromSeconds(timestamp); // debe ser el tiempo en el que se recibió la consulta
+            const ahora_min = ahora.hour * 60 + ahora.minute;
+    
+            let alerta = 0;
+            let alertaMsg = null;
+            response.nuevo_estado = nuevoEstado;        
+            
+            console.log("ACCION", nuevoEstado, currentStatus.estado, accion)
+            if (nuevoEstado == 0 && currentStatus.estado == 1 && accion == "SALIDA") {
+                // SALIDA
+                /**
+                 * falta buscar el mensaje de inicio de turno para formar el mensaje en el calendario
+                 */
+                const inicioTurno = new Date(Number(currentStatus.actualizado_fecha));
+                const finTurno = new Date(ahora.ts);
+                console.log('TURNO CERRADO - usuario:', user.uid);
+                console.log('Inicio:', inicioTurno.toISOString());
+                console.log('Fin:', finTurno.toISOString());
+    
+                const entradaRows = await db_single(
+                    `SELECT * FROM log WHERE usuario_id = ? AND tipo = 1 ORDER BY fecha_hora DESC LIMIT 1`,
+                    [user.id]
+                );
+                const entradaLog = entradaRows[0];
+    
+                const target_luxon = DateTime.fromMillis(user.salida);
+                const target_min = target_luxon.hour * 60 + target_luxon.minute;
+    
+                let diffMin = ahora_min - target_min;
+                if(diffMin > 720){
+                    diffMin -= 1440; // por si cruza la media noche
+                }
+    
+                if(diffMin < -720){
+                    diffMin += 1440;
+                }
+    
+                if (diffMin > 0) {
+                    alerta = 1;
+                    alertaMsg = `Saliste tarde por ${ formatoTiempo(diffMin) }`;
+                } else if (diffMin < 0) {
+                    alerta = 0;
+                    alertaMsg = `Saliste temprano por ${ formatoTiempo(Math.abs(diffMin))}`;
+                } else {
+                    alerta = 0;
+                    alertaMsg = 'Saliste a tiempo';
+                }
+    
+                console.log('diffMin', diffMin, alertaMsg);
+    
+                alerta = 0;
+                const description = `Turno registrado automáticamente por shiftControl. 
+                Entrada: ${entradaLog ? entradaLog.alerta_msg : 'Sin registro'}
+                Salida: ${alertaMsg}`;
+
+                try {
+                    await crearEvents(
+                        user.id_calendario,
+                        `Turno - ${user.nombre} ${user.apellido}`,
+                        description,
+                        inicioTurno.getTime(),
+                        finTurno.getTime()
+                    );
+                } catch (calErr) {
+                    console.error('ERROR AL CREAR EVENTO EN CALENDARIO', calErr);
+                }
+        
+            } else if(accion == "ENTRADA" && currentStatus.estado == 0) {
+                // INGRESO
+                
+                const target_luxon = DateTime.fromMillis(user.ingreso);
+                const target_min = target_luxon.hour * 60 + target_luxon.minute;
+    
+                let diffMin = ahora_min - target_min;
+                if(diffMin > 720){
+                    diffMin -= 1440; // por si cruza la media noche
+                }
+    
+                if(diffMin < -720){
+                    diffMin += 1440;
+                }
+    
+                if (diffMin > 0) {
+                    alerta = 1;
+                    alertaMsg = `Llegaste tarde por ${ formatoTiempo(diffMin) }`;
+                } else if (diffMin < 0) {
+                    alerta = 0;
+                    alertaMsg = `Llegaste temprano por ${ formatoTiempo(Math.abs(diffMin)) }`;
+                } else {
+                    alerta = 0;
+                    alertaMsg = 'Llegaste a tiempo';
+                }
+    
+                console.log('diffMin', diffMin, alertaMsg);
+            } else {
+                response.habilitado = false;
+                response.detalleDelResultado = detalleDelResultado[7];
+                response.usuario = detalleDelResultado[7];
+                
+                return res.json(response);
+            }
+            
+            response.flash = "success";
+            await db_single(
+                `INSERT INTO log (usuario_id, tipo, fecha_hora, creado_fecha, alerta, alerta_msg, comentario, archivo_server, archivo_usuario, dispositivo, uid, accion, timestamp, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [user.id, tipoLog, ahora.ts, current_time, alerta, alertaMsg, descripcion, archivo_server, archivo_usuario, disp_remoto[0]?.id || 0, user.uid, accion, timestamp, ubicacion]
+            );
+    
+            if (currentStatus) {
+                await db_single('UPDATE user_status SET estado = ?, actualizado_fecha = ? WHERE usuario_id = ?', [nuevoEstado, ahora.ts, user.id]);
+            } else {
+                await db_single('INSERT INTO user_status (usuario_id, estado, actualizado_fecha) VALUES (?, ?, ?)', [user.id, nuevoEstado, ahora.ts]);
+            }
+
+        }
+
+        return res.json(response);
 
     } catch (e) {
         console.error('ERROR EN MARCAR', e);

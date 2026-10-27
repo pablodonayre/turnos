@@ -1,0 +1,4 @@
+shift.cashflowtrack.xyz {
+    tls pablodonayre@gmail.com
+    proxy / localhost:8086
+}

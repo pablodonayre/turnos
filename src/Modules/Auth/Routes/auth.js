@@ -28,6 +28,8 @@ router.post('/', trimRequest.body, checkNotAuthenticated, async (req, res) => {
     const db_single = req.app.get('db_single');
 
     try {
+
+        // validando body
         const { error, value } = loginSchema.validate(req.body);
 
         if (error) {
@@ -39,26 +41,32 @@ router.post('/', trimRequest.body, checkNotAuthenticated, async (req, res) => {
         const rows = await db_single('SELECT * FROM usuarios WHERE correo = ? LIMIT 1', [email]);
         const user = rows[0];
 
+        // validando las credenciales
         if (!user) {
             return res.json({ "flash": "danger", "msg": "Credenciales incorrectas" });
         }
 
-    if (user.estatus == 0) {
-        return res.json({ "flash": "danger", "msg": "Usuario inactivo." });
-    }
+        // validando usuario activo
+        if (user.estatus == 0) {
+            return res.json({ "flash": "danger", "msg": "Usuario inactivo." });
+        }
 
-        console.log('PASSWORD INPUT:', password);
-        console.log('HASH EN BD:', user.password);
         const validPassword = await bcrypt.compare(password, user.password);
         console.log('RESULTADO COMPARE:', validPassword);
+
+        // validando el user agent
+        const user_agent = req.headers['user-agent'] || '';
+        const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(user_agent);
 
         if (validPassword) {
             req.session.user = {
                 user_id: user.id,
                 correo: user.correo,
                 nombre: user.nombre.split(' ')[0],
-                rol: user.rol
+                rol: user.rol,
+                es_movil: esMovil ? true : false
             };
+            
         const bienvenido = user.rol === 'ADMIN' ? 'BIENVENIDO ADMIN' : 'BIENVENIDO';
         req.flash('success', bienvenido);
 

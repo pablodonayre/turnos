@@ -15,6 +15,6 @@ module.exports = function(app){
     /**
      * ROUTES
      * **/
-    app.use('/usuario', usuarios);
+    app.use('/usuarios', usuarios);
 
 };

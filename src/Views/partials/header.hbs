@@ -76,7 +76,8 @@
                         {{#if user.nombre}} {{user.nombre}}
                         {{else if user.username}} {{user.username}}
                         {{else if user.user_id}} ID: {{user.user_id}}
-                        {{else}} Sesión activa {{/if}}
+                        {{!-- {{else}} Sesión activa  --}}
+                        {{/if}}
                     </span>
                 </div>
 
@@ -99,6 +100,7 @@
                     <li class="nav-item"><a class="nav-link px-3" href="/home" data-seccion="home">Inicio</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="/logs" data-seccion="logs">Historial</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="/usuarios/lista" data-seccion="usuario">Usuarios</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="/sesion" data-seccion="salir">Sesion</a></li>
                     {{#if is_admin}}
                     <li class="nav-item"><a class="nav-link px-3" href="/turnos" data-seccion="turnos">Turnos</a></li>
                     {{/if}}
